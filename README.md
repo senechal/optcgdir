@@ -18,21 +18,52 @@ e o CRUD de decks (etapa d) serão adicionados nas próximas etapas.
 
 ## Instalação
 
+O `docker-compose.yml` não depende de um arquivo `.env` — as variáveis
+sensíveis (`POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`) não têm valor padrão e o
+Compose recusa subir sem elas, com uma mensagem de erro clara indicando qual
+falta. Isso permite dois fluxos de instalação:
+
+### Opção 1 — pela interface do ZimaOS (recomendado)
+
+1. No terminal do ZimaOS (SSH ou app de terminal), clone o repositório numa
+   pasta persistente, ex:
+   ```bash
+   cd /DATA/AppData
+   git clone https://github.com/senechal/optcgdir.git
+   ```
+2. Na UI do ZimaOS, importe o `docker-compose.yml` de dentro dessa pasta
+   como uma nova stack/app.
+3. A UI vai detectar as variáveis (`POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`,
+   `NEXTAUTH_URL`, `APP_PORT`, etc.) e mostrar campos para preenchê-las antes
+   do deploy — preencha ali, sem precisar criar nenhum arquivo `.env`.
+4. Depois do primeiro deploy, rode o seed inicial do catálogo e as migrations
+   (via terminal do ZimaOS ou pelo botão de "exec" da UI, se ela tiver):
+   ```bash
+   cd /DATA/AppData/optcgdir
+   docker compose run --rm app npx prisma migrate deploy
+   docker compose run --rm -e FULL_SYNC=true catalog-sync
+   ```
+
+### Opção 2 — CLI tradicional (fora da UI do ZimaOS)
+
 ```bash
+git clone https://github.com/senechal/optcgdir.git
+cd optcgdir
 cp .env.example .env
-# edite o .env: troque POSTGRES_PASSWORD, NEXTAUTH_SECRET, e ajuste
-# NEXTAUTH_URL para o IP/hostname do seu ZimaOS na rede local.
+# edite o .env: defina POSTGRES_PASSWORD, NEXTAUTH_SECRET (ex: openssl rand -base64 32),
+# e ajuste NEXTAUTH_URL para o IP/hostname do seu ZimaOS na rede local.
 
 docker compose up -d db
-# espera o banco subir, depois roda as migrations:
 docker compose run --rm app npx prisma migrate deploy
-
-# seed inicial do catálogo (baixa TODAS as cartas + imagens — demora alguns
-# minutos na primeira vez):
 docker compose run --rm -e FULL_SYNC=true catalog-sync
-
-# sobe o app e o agendador de sync semanal:
 docker compose up -d app catalog-sync-scheduler
+```
+
+Em ambos os casos, para atualizar o projeto depois de mudanças no repo:
+```bash
+cd /DATA/AppData/optcgdir   # ou onde você clonou
+git pull
+docker compose up -d --build
 ```
 
 Acesse em `http://<ip-do-zimaos>:3000` (porta configurável via `APP_PORT`).

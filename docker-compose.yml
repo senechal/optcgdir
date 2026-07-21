@@ -6,15 +6,15 @@ services:
     container_name: optcg-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-optcg}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}
+      POSTGRES_DB: ${POSTGRES_DB:-optcg_collection}
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-optcg} -d ${POSTGRES_DB:-optcg_collection}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -29,8 +29,8 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-optcg}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/${POSTGRES_DB:-optcg_collection}
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?Defina NEXTAUTH_SECRET, ex. openssl rand -base64 32}"
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       CATALOG_IMAGES_PATH: /data/catalog-images
     ports:
@@ -50,7 +50,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-optcg}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/${POSTGRES_DB:-optcg_collection}
       CATALOG_IMAGES_PATH: /data/catalog-images
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
     volumes:
@@ -70,7 +70,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-optcg}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/${POSTGRES_DB:-optcg_collection}
       CATALOG_IMAGES_PATH: /data/catalog-images
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
       SYNC_INTERVAL_CRON: "0 6 * * 1"   # segundas 06:00 — sync incremental (endpoints twoweeks)

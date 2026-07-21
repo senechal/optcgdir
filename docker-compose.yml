@@ -21,7 +21,7 @@ services:
 
   app:
     build:
-      context: .
+      context: https://github.com/senechal/optcgdir.git#main
       dockerfile: app/Dockerfile
     container_name: optcg-app
     restart: unless-stopped
@@ -43,7 +43,7 @@ services:
   # ou o profile "cron" abaixo para agendamento semanal automático.
   catalog-sync:
     build:
-      context: .
+      context: https://github.com/senechal/optcgdir.git#main
       dockerfile: catalog-sync/Dockerfile
     container_name: optcg-catalog-sync
     depends_on:
@@ -62,7 +62,7 @@ services:
   # Mesma imagem do catalog-sync, mas com loop de agendamento em vez de rodar 1x e sair.
   catalog-sync-scheduler:
     build:
-      context: .
+      context: https://github.com/senechal/optcgdir.git#main
       dockerfile: catalog-sync/Dockerfile
     container_name: optcg-catalog-sync-scheduler
     restart: unless-stopped

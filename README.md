@@ -18,40 +18,44 @@ e o CRUD de decks (etapa d) serão adicionados nas próximas etapas.
 
 ## Instalação
 
-O `docker-compose.yml` não depende de um arquivo `.env` — as variáveis
-sensíveis (`POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`) não têm valor padrão e o
-Compose recusa subir sem elas, com uma mensagem de erro clara indicando qual
-falta. Isso permite dois fluxos de instalação:
+O `docker-compose.yml` builda as imagens direto da URL do repositório Git
+(`https://github.com/senechal/optcgdir.git#main`) — o próprio Docker clona o
+código na hora do build. Isso significa que **não precisa clonar nada
+manualmente**: é só colar o conteúdo do `docker-compose.yml` na interface do
+ZimaOS (ou salvar o arquivo em qualquer pasta e rodar `docker compose up`
+dali) que tudo é buscado e construído sozinho.
+
+Também não depende de um arquivo `.env`: as variáveis sensíveis
+(`POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`) não têm valor padrão, então o
+Compose recusa subir sem elas e mostra uma mensagem de erro clara indicando
+qual falta — é exatamente isso que faz a UI do ZimaOS detectar essas
+variáveis e te pedir pra preenchê-las antes do deploy.
 
 ### Opção 1 — pela interface do ZimaOS (recomendado)
 
-1. No terminal do ZimaOS (SSH ou app de terminal), clone o repositório numa
-   pasta persistente, ex:
-   ```bash
-   cd /DATA/AppData
-   git clone https://github.com/senechal/optcgdir.git
-   ```
-2. Na UI do ZimaOS, importe o `docker-compose.yml` de dentro dessa pasta
-   como uma nova stack/app.
-3. A UI vai detectar as variáveis (`POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`,
-   `NEXTAUTH_URL`, `APP_PORT`, etc.) e mostrar campos para preenchê-las antes
-   do deploy — preencha ali, sem precisar criar nenhum arquivo `.env`.
+1. Copie o conteúdo de `docker-compose.yml` (deste repo, ou direto do link
+   raw do GitHub) e cole na tela de criar uma nova stack/app do ZimaOS.
+2. A UI vai detectar as variáveis (`POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`,
+   `NEXTAUTH_URL`, `APP_PORT`, etc.) e mostrar campos pra preenchê-las antes
+   do deploy.
+3. Dê o deploy. O Docker vai clonar o repositório e buildar `app` e
+   `catalog-sync` sozinho — não sobe nenhum passo manual de `git clone`.
 4. Depois do primeiro deploy, rode o seed inicial do catálogo e as migrations
-   (via terminal do ZimaOS ou pelo botão de "exec" da UI, se ela tiver):
+   (via terminal do ZimaOS ou o "exec" da UI, se ela tiver):
    ```bash
-   cd /DATA/AppData/optcgdir
    docker compose run --rm app npx prisma migrate deploy
    docker compose run --rm -e FULL_SYNC=true catalog-sync
    ```
 
-### Opção 2 — CLI tradicional (fora da UI do ZimaOS)
+### Opção 2 — CLI (rodando fora da UI do ZimaOS)
 
 ```bash
-git clone https://github.com/senechal/optcgdir.git
-cd optcgdir
-cp .env.example .env
-# edite o .env: defina POSTGRES_PASSWORD, NEXTAUTH_SECRET (ex: openssl rand -base64 32),
-# e ajuste NEXTAUTH_URL para o IP/hostname do seu ZimaOS na rede local.
+mkdir optcg-collection && cd optcg-collection
+curl -O https://raw.githubusercontent.com/senechal/optcgdir/main/docker-compose.yml
+
+export POSTGRES_PASSWORD="troque-esta-senha"
+export NEXTAUTH_SECRET="$(openssl rand -base64 32)"
+export NEXTAUTH_URL="http://<ip-do-zimaos>:3000"
 
 docker compose up -d db
 docker compose run --rm app npx prisma migrate deploy
@@ -59,14 +63,19 @@ docker compose run --rm -e FULL_SYNC=true catalog-sync
 docker compose up -d app catalog-sync-scheduler
 ```
 
-Em ambos os casos, para atualizar o projeto depois de mudanças no repo:
+### Atualizando depois de mudanças no repo
+
+Como o build sempre busca o `main` do GitHub, basta forçar rebuild sem cache:
 ```bash
-cd /DATA/AppData/optcgdir   # ou onde você clonou
-git pull
-docker compose up -d --build
+docker compose build --no-cache app catalog-sync
+docker compose up -d
 ```
 
 Acesse em `http://<ip-do-zimaos>:3000` (porta configurável via `APP_PORT`).
+
+> **Nota:** builds via contexto Git exigem BuildKit (padrão em versões
+> recentes do Docker Engine) e acesso à internet no momento do build — depois
+> de construídas, as imagens rodam normalmente offline.
 
 ## Serviços
 
@@ -90,12 +99,15 @@ limpeza automática, detalhado quando essa etapa for implementada.
 
 ## Variáveis de ambiente
 
-Veja `.env.example`. Resumo:
-
-- `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`: credenciais do Postgres.
-- `APP_PORT`: porta exposta do dashboard (padrão 3000).
-- `NEXTAUTH_SECRET`: segredo da sessão (gere com `openssl rand -base64 32`).
-- `NEXTAUTH_URL`: URL pública da app na sua rede local.
+| Variável | Obrigatória? | Default | Descrição |
+|---|---|---|---|
+| `POSTGRES_USER` | Não | `optcg` | Usuário do Postgres |
+| `POSTGRES_PASSWORD` | **Sim** | — | Senha do Postgres |
+| `POSTGRES_DB` | Não | `optcg_collection` | Nome do banco |
+| `POSTGRES_PORT` | Não | `5432` | Porta exposta do Postgres |
+| `APP_PORT` | Não | `3000` | Porta exposta do dashboard |
+| `NEXTAUTH_SECRET` | **Sim** | — | Segredo da sessão (`openssl rand -base64 32`) |
+| `NEXTAUTH_URL` | Não | `http://localhost:3000` | URL pública da app na sua rede local |
 
 ## Comandos úteis
 

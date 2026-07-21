@@ -38,14 +38,10 @@ variáveis e te pedir pra preenchê-las antes do deploy.
 2. A UI vai detectar as variáveis (`POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`,
    `NEXTAUTH_URL`, `APP_PORT`, etc.) e mostrar campos pra preenchê-las antes
    do deploy.
-3. Dê o deploy. O Docker vai clonar o repositório e buildar `app` e
-   `catalog-sync` sozinho — não sobe nenhum passo manual de `git clone`.
-4. Depois do primeiro deploy, rode o seed inicial do catálogo e as migrations
-   (via terminal do ZimaOS ou o "exec" da UI, se ela tiver):
-   ```bash
-   docker compose run --rm app npx prisma migrate deploy
-   docker compose run --rm -e FULL_SYNC=true catalog-sync
-   ```
+3. Dê o deploy. O serviço `init` roda sozinho antes do `app` subir: aplica o
+   schema no banco e, se o catálogo estiver vazio, baixa todas as cartas +
+   imagens automaticamente (isso leva alguns minutos na primeira vez — o
+   `app` só sobe depois que o `init` terminar). Não precisa rodar nada manual.
 
 ### Opção 2 — CLI (rodando fora da UI do ZimaOS)
 
@@ -57,11 +53,11 @@ export POSTGRES_PASSWORD="troque-esta-senha"
 export NEXTAUTH_SECRET="$(openssl rand -base64 32)"
 export NEXTAUTH_URL="http://<ip-do-zimaos>:3000"
 
-docker compose up -d db
-docker compose run --rm app npx prisma migrate deploy
-docker compose run --rm -e FULL_SYNC=true catalog-sync
-docker compose up -d app catalog-sync-scheduler
+docker compose up -d
 ```
+
+Pronto — `init` cuida do schema e do seed inicial sozinho, e `app` sobe
+assim que ele terminar.
 
 ### Atualizando depois de mudanças no repo
 
@@ -82,8 +78,9 @@ Acesse em `http://<ip-do-zimaos>:3000` (porta configurável via `APP_PORT`).
 | Serviço | Papel | Sempre ligado? |
 |---|---|---|
 | `db` | Postgres 16 | Sim |
-| `app` | Next.js (dashboard, auth, API) | Sim |
-| `catalog-sync` | Sync sob demanda (seed inicial / manual) | Não — roda e sai |
+| `init` | Aplica schema + seed inicial (só se catálogo vazio) | Não — roda e sai |
+| `app` | Next.js (dashboard, auth, API) — só sobe depois do `init` terminar | Sim |
+| `catalog-sync` | Sync manual sob demanda (força um sync fora do agendamento) | Não — roda e sai |
 | `catalog-sync-scheduler` | Sync incremental automático (semanal) | Sim |
 
 ## Volumes (dados persistentes — inclua no seu backup manual)
@@ -112,14 +109,20 @@ limpeza automática, detalhado quando essa etapa for implementada.
 ## Comandos úteis
 
 ```bash
-# rodar sync manual (incremental, só cartas das últimas 2 semanas):
+# forçar um sync manual agora (fora do agendamento semanal):
 docker compose run --rm catalog-sync
 
 # ver logs do agendador de sync:
 docker compose logs -f catalog-sync-scheduler
 
-# aplicar mudanças de schema depois de editar prisma/schema.prisma:
-docker compose run --rm app npx prisma migrate dev --name nome_da_mudanca
+# aplicar mudanças de schema depois de editar prisma/schema.prisma
+# (o serviço `init` já faz isso sozinho no próximo `docker compose up`,
+# mas dá pra forçar na hora sem esperar):
+docker compose run --rm init npx prisma db push --skip-generate
+
+# rodar o seed inicial de novo mesmo com o catálogo já populado
+# (ex: se quiser re-baixar todas as imagens):
+docker compose run --rm -e FULL_SYNC=true catalog-sync
 ```
 
 ## Créditos e licenciamento de dados

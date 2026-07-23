@@ -1,18 +1,19 @@
+name: optcg
 services:
   db:
     image: postgres:16-alpine
     container_name: optcg-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-optcg}
+      POSTGRES_USER: luffy
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}
-      POSTGRES_DB: ${POSTGRES_DB:-optcg_collection}
+      POSTGRES_DB: optcg_collection
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - /DATA/AppData/optcgdir/postgresql:/var/lib/postgresql/data
     ports:
-      - 5432:5432"
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-optcg} -d ${POSTGRES_DB:-optcg_collection}"]
+      test: ["CMD-SHELL", "pg_isready -U luffy -d optcg_collection"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,21 +22,25 @@ services:
   # se o catálogo ainda estiver vazio, faz o seed inicial completo.
   # Some (exit 0) depois de terminar — não fica de pé.
   init:
-    image: ghcr.io/senechal/optcgdir-catalog-sync:latest
+    build:
+      context: https://github.com/senechal/optcgdir.git#main
+      dockerfile: catalog-sync/Dockerfile
     container_name: optcg-init
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-optcg}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/${POSTGRES_DB:-optcg_collection}
+      DATABASE_URL: postgresql://luffy:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/optcg_collection
       CATALOG_IMAGES_PATH: /data/catalog-images
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
     volumes:
-      - catalog-images:/data/catalog-images
+      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images
     command: ["src/init.js"]
 
   app:
-    image: ghcr.io/senechal/optcgdir-app:latest
+    build:
+      context: https://github.com/senechal/optcgdir.git#main
+      dockerfile: app/Dockerfile
     container_name: optcg-app
     restart: unless-stopped
     depends_on:
@@ -44,37 +49,41 @@ services:
       init:
         condition: service_completed_successfully
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-optcg}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/${POSTGRES_DB:-optcg_collection}
+      DATABASE_URL: postgresql://luffy:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/optcg_collection
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?Defina NEXTAUTH_SECRET, ex. openssl rand -base64 32}"
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:8420}
       CATALOG_IMAGES_PATH: /data/catalog-images
     ports:
-      - "8420:3000"
+      - 8420:3000"
     volumes:
-      - catalog-images:/data/catalog-images:ro   # app só lê as imagens já sincronizadas
+      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images:ro   # app só lê as imagens já sincronizadas
 
   # Roda sob demanda (seed inicial) ou via cron externo do host / scheduler simples.
   # Não fica de pé o tempo todo: usar `docker compose run --rm catalog-sync`
   # ou o profile "cron" abaixo para agendamento semanal automático.
   catalog-sync:
-    image: ghcr.io/senechal/optcgdir-catalog-sync:latest
+    build:
+      context: https://github.com/senechal/optcgdir.git#main
+      dockerfile: catalog-sync/Dockerfile
     container_name: optcg-catalog-sync
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-optcg}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/${POSTGRES_DB:-optcg_collection}
+      DATABASE_URL: postgresql://luffy:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/optcg_collection
       CATALOG_IMAGES_PATH: /data/catalog-images
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
     volumes:
-      - catalog-images:/data/catalog-images
+      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images
     profiles:
       - tools   # não sobe automaticamente com `docker compose up`
 
   # Serviço opcional: dispara o sync automaticamente 1x/semana.
   # Mesma imagem do catalog-sync, mas com loop de agendamento em vez de rodar 1x e sair.
   catalog-sync-scheduler:
-    image: ghcr.io/senechal/optcgdir-catalog-sync:latest
+    build:
+      context: https://github.com/senechal/optcgdir.git#main
+      dockerfile: catalog-sync/Dockerfile
     container_name: optcg-catalog-sync-scheduler
     restart: unless-stopped
     depends_on:
@@ -83,12 +92,12 @@ services:
       init:
         condition: service_completed_successfully
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-optcg}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/${POSTGRES_DB:-optcg_collection}
+      DATABASE_URL: postgresql://luffy:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/optcg_collection
       CATALOG_IMAGES_PATH: /data/catalog-images
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
       SYNC_INTERVAL_CRON: "0 6 * * 1"   # segundas 06:00 — sync incremental (endpoints twoweeks)
     volumes:
-      - catalog-images:/data/catalog-images
+      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images
     command: ["src/index.js"]
 
 volumes:

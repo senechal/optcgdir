@@ -2,6 +2,10 @@ FROM node:20-alpine
 
 WORKDIR /service
 
+# Prisma precisa do OpenSSL pra rodar seus engines nativos no Alpine (musl);
+# sem isso, o schema-engine falha silenciosamente com erro de shared library.
+RUN apk add --no-cache openssl
+
 # Schema compartilhado com o app (mesma fonte de verdade do banco)
 COPY app/prisma ./prisma
 COPY catalog-sync/package.json ./package.json

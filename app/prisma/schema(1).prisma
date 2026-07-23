@@ -1,0 +1,118 @@
+// Schema Postgres para o gerenciador de coleção OPTCG
+// Chave real de "carta impressa": card_image_id (ex: OP01-001 vs OP01-001_p1 = parallel)
+// card_set_id NÃO é único (pode ter várias versões/parallels sob o mesmo código)
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Set {
+  id      String @id @map("set_id")   // ex: "OP-01"
+  name    String @map("set_name")
+  cards   Card[]
+
+  @@map("sets")
+}
+
+model Card {
+  // Chave única real da carta impressa (inclui variantes/parallels)
+  cardImageId   String   @id @map("card_image_id")   // ex: "OP01-001" ou "OP01-001_p1"
+  cardSetId     String   @map("card_set_id")          // ex: "OP01-001" (código impresso, pode repetir entre variantes)
+  cardName      String   @map("card_name")
+  cardText      String?  @map("card_text") @db.Text
+  cardColor     String?  @map("card_color")           // pode ser "Red/Green" etc
+  cardType      String   @map("card_type")            // Leader | Character | Event | Stage
+  rarity        String?
+  cardCost      String?  @map("card_cost")
+  cardPower     String?  @map("card_power")
+  life          String?
+  counterAmount String?  @map("counter_amount")
+  attribute     String?
+  subTypes      String?  @map("sub_types")
+  isParallel    Boolean  @default(false) @map("is_parallel")
+
+  setId         String   @map("set_id")
+  set           Set      @relation(fields: [setId], references: [id])
+
+  // Origem: set normal, starter deck (ST), promo ou Don!!
+  sourceType    String   @default("set") @map("source_type") // "set" | "starter" | "promo" | "don"
+
+  remoteImageUrl String? @map("remote_image_url")  // URL original da optcgapi
+  localImagePath String? @map("local_image_path")  // caminho relativo no volume local
+
+  lastSyncedAt  DateTime @default(now()) @map("last_synced_at")
+
+  collectionItems CollectionItem[]
+  deckCards       DeckCard[]
+  decksAsLeader   Deck[]           @relation("LeaderCard")
+
+  @@index([cardSetId])
+  @@index([cardName])
+  @@map("cards")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  decks           Deck[]
+  collectionItems CollectionItem[]
+
+  @@map("users")
+}
+
+model CollectionItem {
+  id          String   @id @default(cuid())
+  cardImageId String   @map("card_image_id")
+  card        Card     @relation(fields: [cardImageId], references: [cardImageId])
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
+
+  quantity    Int      @default(1)
+  condition   String?  // ex: "NM", "LP", "MP", "HP"
+  wantsTrade  Boolean  @default(false) @map("wants_trade")
+  notes       String?
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([cardImageId, userId, condition])
+  @@map("collection_items")
+}
+
+model Deck {
+  id            String   @id @default(cuid())
+  name          String
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id])
+
+  leaderCardId  String?  @map("leader_card_id")
+  leaderCard    Card?    @relation("LeaderCard", fields: [leaderCardId], references: [cardImageId])
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  deckCards     DeckCard[]
+
+  @@map("decks")
+}
+
+model DeckCard {
+  id          String @id @default(cuid())
+  deckId      String @map("deck_id")
+  deck        Deck   @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  cardImageId String @map("card_image_id")
+  card        Card   @relation(fields: [cardImageId], references: [cardImageId])
+  quantity    Int    @default(1)
+
+  @@unique([deckId, cardImageId])
+  @@map("deck_cards")
+}

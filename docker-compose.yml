@@ -1,7 +1,9 @@
-name: optcg
+name: optcgdir
 services:
   db:
     image: postgres:16-alpine
+    labels:
+      icon: https://cf.geekdo-images.com/cpyej29PfijgBDtiOuSFsQ__imagepagezoom/img/xms1Q7H_rdBvATzPJuiISO29Xt8=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic6974116.jpg
     container_name: optcg-db
     restart: unless-stopped
     environment:
@@ -9,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}
       POSTGRES_DB: optcg_collection
     volumes:
-      - /DATA/AppData/optcgdir/postgresql:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -22,9 +24,9 @@ services:
   # se o catálogo ainda estiver vazio, faz o seed inicial completo.
   # Some (exit 0) depois de terminar — não fica de pé.
   init:
-    build:
-      context: https://github.com/senechal/optcgdir.git#main
-      dockerfile: catalog-sync/Dockerfile
+    image: ghcr.io/senechal/optcgdir-catalog-sync:latest
+    labels:
+      icon: https://cf.geekdo-images.com/cpyej29PfijgBDtiOuSFsQ__imagepagezoom/img/xms1Q7H_rdBvATzPJuiISO29Xt8=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic6974116.jpg
     container_name: optcg-init
     depends_on:
       db:
@@ -34,13 +36,13 @@ services:
       CATALOG_IMAGES_PATH: /data/catalog-images
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
     volumes:
-      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images
+      - /DATA/AppData/optcgdir/catalogImages:/data/catalog-images
     command: ["src/init.js"]
 
   app:
-    build:
-      context: https://github.com/senechal/optcgdir.git#main
-      dockerfile: app/Dockerfile
+    image: ghcr.io/senechal/optcgdir-app:latest
+    labels:
+      icon: https://cf.geekdo-images.com/cpyej29PfijgBDtiOuSFsQ__imagepagezoom/img/xms1Q7H_rdBvATzPJuiISO29Xt8=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic6974116.jpg
     container_name: optcg-app
     restart: unless-stopped
     depends_on:
@@ -51,20 +53,20 @@ services:
     environment:
       DATABASE_URL: postgresql://luffy:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}@db:5432/optcg_collection
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?Defina NEXTAUTH_SECRET, ex. openssl rand -base64 32}"
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:8420}
+      NEXTAUTH_URL: http://localhost:8420
       CATALOG_IMAGES_PATH: /data/catalog-images
     ports:
-      - 8420:3000"
+      - "8420:3000"
     volumes:
-      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images:ro   # app só lê as imagens já sincronizadas
+      - /DATA/AppData/optcgdir/catalogImages:/data/catalog-images:ro   # app só lê as imagens já sincronizadas
 
   # Roda sob demanda (seed inicial) ou via cron externo do host / scheduler simples.
   # Não fica de pé o tempo todo: usar `docker compose run --rm catalog-sync`
   # ou o profile "cron" abaixo para agendamento semanal automático.
   catalog-sync:
-    build:
-      context: https://github.com/senechal/optcgdir.git#main
-      dockerfile: catalog-sync/Dockerfile
+    image: ghcr.io/senechal/optcgdir-catalog-sync:latest
+    labels:
+      icon: https://cf.geekdo-images.com/cpyej29PfijgBDtiOuSFsQ__imagepagezoom/img/xms1Q7H_rdBvATzPJuiISO29Xt8=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic6974116.jpg
     container_name: optcg-catalog-sync
     depends_on:
       db:
@@ -74,16 +76,16 @@ services:
       CATALOG_IMAGES_PATH: /data/catalog-images
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
     volumes:
-      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images
+      - /DATA/AppData/optcgdir/catalogImages:/data/catalog-images
     profiles:
       - tools   # não sobe automaticamente com `docker compose up`
 
   # Serviço opcional: dispara o sync automaticamente 1x/semana.
   # Mesma imagem do catalog-sync, mas com loop de agendamento em vez de rodar 1x e sair.
   catalog-sync-scheduler:
-    build:
-      context: https://github.com/senechal/optcgdir.git#main
-      dockerfile: catalog-sync/Dockerfile
+    image: ghcr.io/senechal/optcgdir-catalog-sync:latest
+    labels:
+      icon: https://cf.geekdo-images.com/cpyej29PfijgBDtiOuSFsQ__imagepagezoom/img/xms1Q7H_rdBvATzPJuiISO29Xt8=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic6974116.jpg
     container_name: optcg-catalog-sync-scheduler
     restart: unless-stopped
     depends_on:
@@ -97,7 +99,7 @@ services:
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
       SYNC_INTERVAL_CRON: "0 6 * * 1"   # segundas 06:00 — sync incremental (endpoints twoweeks)
     volumes:
-      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images
+      - /DATA/AppData/optcgdir/catalogImages:/data/catalog-images
     command: ["src/index.js"]
 
 volumes:
@@ -105,3 +107,16 @@ volumes:
     name: optcg-db-data          # backup: pg_dump ou backup do volume inteiro
   catalog-images:
     name: optcg-catalog-images   # backup: copiar a pasta, são só imagens oficiais do catálogo
+x-casaos:
+  author: self
+  category: self
+  hostname: ""
+  icon: https://cf.geekdo-images.com/cpyej29PfijgBDtiOuSFsQ__imagepagezoom/img/xms1Q7H_rdBvATzPJuiISO29Xt8=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic6974116.jpg
+  index: /
+  is_uncontrolled: false
+  port_map: "5432"
+  scheme: http
+  store_app_id: db
+  title:
+    custom: OpTCG Directory
+    en_us:  OpTCG Directory

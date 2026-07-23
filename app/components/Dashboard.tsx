@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
+import CardImage from "./CardImage";
 
 export type CardWithCollectionInfo = {
   cardImageId: string;
@@ -15,6 +16,8 @@ export type CardWithCollectionInfo = {
   counterAmount: string | null;
   setId: string;
   localImagePath: string | null;
+  isParallel: boolean;
+  sourceType: string;
   quantity: number;
   wantsTrade: boolean;
   allocatedInDecks: number;
@@ -27,9 +30,11 @@ type FilterOptions = {
   types: string[];
 };
 
-function cardmarketUrl(cardName: string) {
+function cardmarketUrl(card: CardWithCollectionInfo) {
+  const variant = card.sourceType === "promo" ? "Promo" : card.isParallel ? "V.2" : "V.1";
+  const searchString = `${card.cardName} ${card.cardSetId} ${variant}`;
   return `https://www.cardmarket.com/en/OnePiece/Products/Search?searchString=${encodeURIComponent(
-    cardName
+    searchString
   )}`;
 }
 
@@ -325,15 +330,9 @@ function CardTile({
   return (
     <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 8, textAlign: "center" }}>
       {card.localImagePath ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/api/catalog-image/${card.localImagePath}`}
-          alt={card.cardName}
-          style={{ width: "100%", borderRadius: 4, display: "block" }}
-          loading="lazy"
-        />
+        <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
       ) : (
-        <div style={{ height: 180, background: "#eee", borderRadius: 4 }} />
+        <div style={{ aspectRatio: "63 / 88", background: "#eee", borderRadius: 4 }} />
       )}
       <div style={{ fontSize: 12, marginTop: 6, fontWeight: 600 }}>{card.cardName}</div>
       <div style={{ fontSize: 11, color: "#888" }}>{card.cardSetId}</div>
@@ -368,7 +367,7 @@ function CardTile({
         </button>
       </div>
       <a
-        href={cardmarketUrl(card.cardName)}
+        href={cardmarketUrl(card)}
         target="_blank"
         rel="noreferrer"
         style={{ fontSize: 11, display: "block", marginTop: 6 }}
@@ -389,7 +388,7 @@ function CardRow({
   return (
     <tr style={{ borderBottom: "1px solid #eee" }}>
       <td style={{ padding: 6 }}>
-        <a href={cardmarketUrl(card.cardName)} target="_blank" rel="noreferrer">
+        <a href={cardmarketUrl(card)} target="_blank" rel="noreferrer">
           {card.cardName}
         </a>
       </td>

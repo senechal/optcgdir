@@ -80,6 +80,8 @@ export default async function Home({
     counterAmount: c.counterAmount,
     setId: c.setId,
     localImagePath: c.localImagePath,
+    isParallel: c.isParallel,
+    sourceType: c.sourceType,
     quantity: c.collectionItems.reduce((sum: number, ci: any) => sum + ci.quantity, 0),
     wantsTrade: c.collectionItems.some((ci: any) => ci.wantsTrade),
     allocatedInDecks: c.deckCards.reduce((sum: number, dc: any) => sum + dc.quantity, 0),

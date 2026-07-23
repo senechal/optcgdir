@@ -22,6 +22,8 @@ jobs:
             dockerfile: app/Dockerfile
           - image_name: optcgdir-catalog-sync
             dockerfile: catalog-sync/Dockerfile
+          - image_name: optcgdir-ocr-service
+            dockerfile: ocr-service/Dockerfile
 
     steps:
       - name: Checkout do repositório

@@ -55,10 +55,30 @@ services:
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?Defina NEXTAUTH_SECRET, ex. openssl rand -base64 32}"
       NEXTAUTH_URL: http://localhost:8420
       CATALOG_IMAGES_PATH: /data/catalog-images
+      SCAN_TEMP_PATH: /data/scan-temp
+      OCR_SERVICE_URL: http://ocr-service:5000
     ports:
       - "8420:3000"
     volumes:
       - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images:ro   # app só lê as imagens já sincronizadas
+      - /DATA/AppData/optcgdir/scan-temp:/data/scan-temp                # app é o único que escreve aqui
+
+  # Recebe o caminho de uma foto (já salva pelo app em /data/scan-temp) e
+  # devolve o texto extraído via OpenCV (endireitar/recortar) + Tesseract.
+  # Sem porta publicada — só acessível de dentro da rede do compose.
+  ocr-service:
+    image: ghcr.io/senechal/optcgdir-ocr-service:latest
+    labels:
+      icon: https://cf.geekdo-images.com/cpyej29PfijgBDtiOuSFsQ__imagepagezoom/img/xms1Q7H_rdBvATzPJuiISO29Xt8=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic6974116.jpg
+    container_name: optcg-ocr-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - /DATA/AppData/optcgdir/scan-temp:/data/scan-temp:ro   # só lê fotos que o app já salvou
 
   # Roda sob demanda (seed inicial) ou via cron externo do host / scheduler simples.
   # Não fica de pé o tempo todo: usar `docker compose run --rm catalog-sync`

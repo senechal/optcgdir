@@ -97,7 +97,12 @@ export default function Dashboard({
 
   return (
     <div style={{ fontFamily: "sans-serif", padding: 24, maxWidth: 1400, margin: "0 auto" }}>
-      <h1 style={{ marginBottom: 4 }}>OPTCG Collection Manager</h1>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <h1 style={{ marginBottom: 4 }}>OPTCG Collection Manager</h1>
+        <a href="/scan" style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+          📷 Escanear carta
+        </a>
+      </div>
       <p style={{ color: "#888", marginTop: 0, marginBottom: 20 }}>
         {cards.length} carta(s) encontradas {isPending && "— atualizando..."}
       </p>

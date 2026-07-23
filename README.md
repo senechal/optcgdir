@@ -139,6 +139,13 @@ docker compose run --rm init npx prisma db push --skip-generate
 docker compose run --rm -e FULL_SYNC=true catalog-sync
 ```
 
+## Licença
+
+Este projeto usa a [PolyForm Noncommercial License 1.0.0](LICENSE): open
+source, livre pra usar, copiar, modificar e distribuir — mas **não pode ser
+usado para fins comerciais**. Uso pessoal, educacional, de pesquisa ou hobby
+é sempre permitido.
+
 ## Créditos e licenciamento de dados
 
 Dados de cartas via [optcgapi.com](https://optcgapi.com) (API pública,

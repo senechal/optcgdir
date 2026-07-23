@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD antes de iniciar}
       POSTGRES_DB: optcg_collection
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - /DATA/AppData/optcgdir/postgresql:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -36,7 +36,7 @@ services:
       CATALOG_IMAGES_PATH: /data/catalog-images
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
     volumes:
-      - /DATA/AppData/optcgdir/catalogImages:/data/catalog-images
+      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images
     command: ["src/init.js"]
 
   app:
@@ -58,7 +58,7 @@ services:
     ports:
       - "8420:3000"
     volumes:
-      - /DATA/AppData/optcgdir/catalogImages:/data/catalog-images:ro   # app só lê as imagens já sincronizadas
+      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images:ro   # app só lê as imagens já sincronizadas
 
   # Roda sob demanda (seed inicial) ou via cron externo do host / scheduler simples.
   # Não fica de pé o tempo todo: usar `docker compose run --rm catalog-sync`
@@ -76,7 +76,7 @@ services:
       CATALOG_IMAGES_PATH: /data/catalog-images
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
     volumes:
-      - /DATA/AppData/optcgdir/catalogImages:/data/catalog-images
+      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images
     profiles:
       - tools   # não sobe automaticamente com `docker compose up`
 
@@ -99,7 +99,7 @@ services:
       OPTCGAPI_BASE_URL: https://optcgapi.com/api
       SYNC_INTERVAL_CRON: "0 6 * * 1"   # segundas 06:00 — sync incremental (endpoints twoweeks)
     volumes:
-      - /DATA/AppData/optcgdir/catalogImages:/data/catalog-images
+      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images
     command: ["src/index.js"]
 
 volumes:

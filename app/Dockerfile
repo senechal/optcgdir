@@ -5,6 +5,8 @@ RUN npm install
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+# Prisma precisa do OpenSSL pra rodar seus engines nativos no Alpine (musl)
+RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY app/prisma ./prisma
 COPY app/ .
@@ -16,6 +18,8 @@ RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
+# Prisma Client roda em tempo de execução aqui e também precisa do OpenSSL
+RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public

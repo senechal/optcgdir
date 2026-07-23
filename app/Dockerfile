@@ -8,6 +8,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY app/prisma ./prisma
 COPY app/ .
+# Valor fictício: só existe durante o build, nunca é usado de verdade
+# (evita qualquer tentativa de conexão real durante `prisma generate`/`next build`)
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 RUN npx prisma generate
 RUN npm run build
 

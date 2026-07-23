@@ -1,5 +1,9 @@
 import { prisma } from "../lib/prisma";
 
+// Essa página consulta o banco em tempo real — não pode ser pré-renderizada
+// no `next build` (não há Postgres disponível durante o build da imagem).
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const totalCards = await prisma.card.count();
   const totalSets = await prisma.set.count();

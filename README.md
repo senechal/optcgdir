@@ -18,12 +18,27 @@ e o CRUD de decks (etapa d) serão adicionados nas próximas etapas.
 
 ## Instalação
 
-O `docker-compose.yml` builda as imagens direto da URL do repositório Git
-(`https://github.com/senechal/optcgdir.git#main`) — o próprio Docker clona o
-código na hora do build. Isso significa que **não precisa clonar nada
-manualmente**: é só colar o conteúdo do `docker-compose.yml` na interface do
-ZimaOS (ou salvar o arquivo em qualquer pasta e rodar `docker compose up`
-dali) que tudo é buscado e construído sozinho.
+As imagens Docker (`app` e `catalog-sync`) são construídas automaticamente
+pelo GitHub Actions a cada push na branch `main` e publicadas no **GitHub
+Container Registry (GHCR)**. O `docker-compose.yml` só referencia essas
+imagens prontas via `image:` — é isso que faz o instalador "custom app" do
+ZimaOS funcionar (ele espera imagens prontas pra puxar, não sabe buildar a
+partir de um Dockerfile).
+
+### Passo único (só na primeira vez): tornar os pacotes públicos
+
+Depois do primeiro push, o GitHub Actions builda e publica as imagens em
+`ghcr.io/senechal/optcgdir-app` e `ghcr.io/senechal/optcgdir-catalog-sync`.
+Por padrão, o GHCR cria esses pacotes como **privados**, mesmo o repositório
+sendo público — então o ZimaOS não vai conseguir puxá-los sem autenticação
+até você mudar isso manualmente:
+
+1. Vá em `github.com/senechal?tab=packages`.
+2. Abra cada pacote (`optcgdir-app`, `optcgdir-catalog-sync`) → **Package settings**.
+3. Em "Danger Zone", mude a visibilidade pra **Public**.
+
+Isso só precisa ser feito uma vez — pushes seguintes atualizam a mesma
+imagem, já pública.
 
 Também não depende de um arquivo `.env`: as variáveis sensíveis
 (`POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`) não têm valor padrão, então o
@@ -38,10 +53,11 @@ variáveis e te pedir pra preenchê-las antes do deploy.
 2. A UI vai detectar as variáveis (`POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`,
    `NEXTAUTH_URL`, `APP_PORT`, etc.) e mostrar campos pra preenchê-las antes
    do deploy.
-3. Dê o deploy. O serviço `init` roda sozinho antes do `app` subir: aplica o
-   schema no banco e, se o catálogo estiver vazio, baixa todas as cartas +
-   imagens automaticamente (isso leva alguns minutos na primeira vez — o
-   `app` só sobe depois que o `init` terminar). Não precisa rodar nada manual.
+3. Dê o deploy. O ZimaOS puxa as imagens do GHCR (não builda nada) e o
+   serviço `init` roda sozinho antes do `app` subir: aplica o schema no
+   banco e, se o catálogo estiver vazio, baixa todas as cartas + imagens
+   automaticamente (isso leva alguns minutos na primeira vez — o `app` só
+   sobe depois que o `init` terminar). Não precisa rodar nada manual.
 
 ### Opção 2 — CLI (rodando fora da UI do ZimaOS)
 
@@ -61,17 +77,15 @@ assim que ele terminar.
 
 ### Atualizando depois de mudanças no repo
 
-Como o build sempre busca o `main` do GitHub, basta forçar rebuild sem cache:
+Cada push na `main` já builda e publica novas imagens automaticamente
+(acompanhe em `github.com/senechal/optcgdir/actions`). No ZimaOS, é só puxar
+a imagem nova e recriar os containers:
 ```bash
-docker compose build --no-cache app catalog-sync
+docker compose pull
 docker compose up -d
 ```
 
 Acesse em `http://<ip-do-zimaos>:8420` (porta configurável via `APP_PORT`).
-
-> **Nota:** builds via contexto Git exigem BuildKit (padrão em versões
-> recentes do Docker Engine) e acesso à internet no momento do build — depois
-> de construídas, as imagens rodam normalmente offline.
 
 ## Serviços
 

@@ -51,7 +51,7 @@ curl -O https://raw.githubusercontent.com/senechal/optcgdir/main/docker-compose.
 
 export POSTGRES_PASSWORD="troque-esta-senha"
 export NEXTAUTH_SECRET="$(openssl rand -base64 32)"
-export NEXTAUTH_URL="http://<ip-do-zimaos>:3000"
+export NEXTAUTH_URL="http://<ip-do-zimaos>:8420"
 
 docker compose up -d
 ```
@@ -67,7 +67,7 @@ docker compose build --no-cache app catalog-sync
 docker compose up -d
 ```
 
-Acesse em `http://<ip-do-zimaos>:3000` (porta configurável via `APP_PORT`).
+Acesse em `http://<ip-do-zimaos>:8420` (porta configurável via `APP_PORT`).
 
 > **Nota:** builds via contexto Git exigem BuildKit (padrão em versões
 > recentes do Docker Engine) e acesso à internet no momento do build — depois
@@ -102,9 +102,9 @@ limpeza automática, detalhado quando essa etapa for implementada.
 | `POSTGRES_PASSWORD` | **Sim** | — | Senha do Postgres |
 | `POSTGRES_DB` | Não | `optcg_collection` | Nome do banco |
 | `POSTGRES_PORT` | Não | `5432` | Porta exposta do Postgres |
-| `APP_PORT` | Não | `3000` | Porta exposta do dashboard |
+| `APP_PORT` | Não | `8420` | Porta exposta do dashboard |
 | `NEXTAUTH_SECRET` | **Sim** | — | Segredo da sessão (`openssl rand -base64 32`) |
-| `NEXTAUTH_URL` | Não | `http://localhost:3000` | URL pública da app na sua rede local |
+| `NEXTAUTH_URL` | Não | `http://localhost:8420` | URL pública da app na sua rede local |
 
 ## Comandos úteis
 

@@ -4,7 +4,12 @@ import { useRouter, usePathname } from "next/navigation";
 import { useState, useTransition, type ChangeEvent } from "react";
 import CardImage from "./CardImage";
 
-type ScanCandidate = { cardImageId: string; cardSetId: string; cardName: string };
+type ScanCandidate = {
+  cardImageId: string;
+  cardSetId: string;
+  cardName: string;
+  matchedByCode: boolean;
+};
 
 export type CardWithCollectionInfo = {
   cardImageId: string;
@@ -32,11 +37,16 @@ type FilterOptions = {
   types: string[];
 };
 
+// O card_name da optcgapi já vem com sufixos como "(Parallel)" ou
+// "(Alternative Art)" — removemos porque a variante já é representada
+// separadamente (V.1/V.2/Promo no link do Cardmarket, ou porque buscar
+// pelo nome-base traz todas as variantes daquela carta).
+function stripVariantSuffix(name: string): string {
+  return name.replace(/\s*\([^)]*\)\s*$/, "");
+}
+
 function cardmarketUrl(card: CardWithCollectionInfo) {
-  // O card_name da optcgapi já vem com sufixos como "(Parallel)" ou
-  // "(Alternative Art)" — removemos aqui porque a variante já é
-  // representada separadamente por V.1/V.2/Promo.
-  const baseName = card.cardName.replace(/\s*\([^)]*\)\s*$/, "");
+  const baseName = stripVariantSuffix(card.cardName);
   const variant = card.sourceType === "promo" ? "Promo" : card.isParallel ? "V.2" : "V.1";
   const searchString = `${baseName} ${card.cardSetId} ${variant}`;
   return `https://www.cardmarket.com/en/OnePiece/Products/Search?searchString=${encodeURIComponent(
@@ -110,9 +120,20 @@ export default function Dashboard({
         return;
       }
 
-      setSearchInput(top.cardSetId);
-      updateParam("search", top.cardSetId);
-      setScanNotice(`Carta identificada: ${top.cardName} (${top.cardSetId}) — não é essa? ajuste a busca acima.`);
+      // Código impresso é o sinal mais confiável (busca 1 carta específica);
+      // se o OCR não achou um código com confiança, cai pro nome — mais
+      // abrangente, mas evita filtrar pela carta errada por causa de um
+      // código mal lido.
+      if (top.matchedByCode) {
+        setSearchInput(top.cardSetId);
+        updateParam("search", top.cardSetId);
+        setScanNotice(`Carta identificada pelo código: ${top.cardName} (${top.cardSetId}) — não é essa? ajuste a busca acima.`);
+      } else {
+        const searchTerm = stripVariantSuffix(top.cardName);
+        setSearchInput(searchTerm);
+        updateParam("search", searchTerm);
+        setScanNotice(`Código não identificado com confiança — buscando por nome: "${searchTerm}". Ajuste a busca acima se não for essa.`);
+      }
     } catch {
       setScanError("Falha ao enviar a foto");
     } finally {

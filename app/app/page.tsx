@@ -1,7 +1,9 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "../lib/prisma";
 import { getDefaultUserId } from "../lib/currentUser";
 import Dashboard, { type CardWithCollectionInfo } from "../components/Dashboard";
 import packageJson from "../package.json";
+import type { Locale } from "../i18n/request";
 
 // Consulta o banco em tempo real — não pode ser pré-renderizada no build
 // (não há Postgres disponível durante a construção da imagem).
@@ -18,15 +20,9 @@ const appVersion = process.env.APP_VERSION || packageJson.version;
 // por uma cor (contains, abaixo) já bate em qualquer carta que tenha essa
 // cor entre as suas. Fixo em vez de vir do banco: listar os valores
 // distintos de card_color traria cada combinação como uma opção separada
-// (ex: "Blue Red", "Black Yellow"), não só as 6 cores base.
-const COLORS = [
-  { value: "Red", label: "Vermelho" },
-  { value: "Green", label: "Verde" },
-  { value: "Blue", label: "Azul" },
-  { value: "Purple", label: "Roxo" },
-  { value: "Black", label: "Preto" },
-  { value: "Yellow", label: "Amarelo" },
-];
+// (ex: "Blue Red", "Black Yellow"), não só as 6 cores base. O "value" é
+// sempre em inglês (é o que fica gravado no banco); só o "label" traduz.
+const COLOR_VALUES = ["Red", "Green", "Blue", "Purple", "Black", "Yellow"] as const;
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -40,6 +36,9 @@ export default async function Home({
   searchParams: SearchParams;
 }) {
   const userId = await getDefaultUserId();
+  const locale = await getLocale();
+  const tColors = await getTranslations("Colors");
+  const COLORS = COLOR_VALUES.map((value) => ({ value, label: tColors(value) }));
 
   const color = first(searchParams.color);
   const rarity = first(searchParams.rarity);
@@ -166,6 +165,7 @@ export default async function Home({
       view={view}
       groupBySet={groupBySet}
       version={appVersion}
+      locale={locale as Locale}
     />
   );
 }

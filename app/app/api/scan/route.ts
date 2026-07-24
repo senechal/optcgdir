@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "../../../lib/prisma";
 import { rankCardsByOcrText, type MatchableCard } from "../../../lib/cardMatch";
 import { sweepStaleScanTempFiles } from "../../../lib/scanTempCleanup";
@@ -12,14 +13,15 @@ const MAX_PHOTO_SIZE = 15 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   sweepStaleScanTempFiles().catch(() => {});
+  const t = await getTranslations("ScanApi");
 
   const formData = await req.formData().catch(() => null);
   const photo = formData?.get("photo");
   if (!formData || !(photo instanceof File)) {
-    return NextResponse.json({ error: "Nenhuma foto enviada" }, { status: 400 });
+    return NextResponse.json({ error: t("noPhotoSent") }, { status: 400 });
   }
   if (photo.size > MAX_PHOTO_SIZE) {
-    return NextResponse.json({ error: "Foto muito grande" }, { status: 400 });
+    return NextResponse.json({ error: t("photoTooLarge") }, { status: 400 });
   }
 
   const ext = photo.type === "image/png" ? ".png" : ".jpg";
@@ -37,11 +39,11 @@ export async function POST(req: NextRequest) {
     });
     const ocrBody = await ocrRes.json().catch(() => null);
     if (!ocrRes.ok || !ocrBody) {
-      return NextResponse.json({ error: "Falha ao processar a imagem" }, { status: 502 });
+      return NextResponse.json({ error: t("imageProcessingFailed") }, { status: 502 });
     }
     extractedText = ocrBody.text ?? "";
   } catch {
-    return NextResponse.json({ error: "Falha ao processar a imagem" }, { status: 502 });
+    return NextResponse.json({ error: t("imageProcessingFailed") }, { status: 502 });
   } finally {
     await fs.unlink(containerPath).catch(() => {});
   }

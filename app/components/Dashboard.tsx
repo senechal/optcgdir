@@ -2,7 +2,10 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useTransition, type ChangeEvent } from "react";
+import { useTranslations } from "next-intl";
 import CardImage from "./CardImage";
+import LocaleSwitcher from "./LocaleSwitcher";
+import type { Locale } from "../i18n/request";
 
 type ScanCandidate = {
   cardImageId: string;
@@ -61,6 +64,7 @@ export default function Dashboard({
   view,
   groupBySet,
   version,
+  locale,
 }: {
   cards: CardWithCollectionInfo[];
   filterOptions: FilterOptions;
@@ -68,7 +72,9 @@ export default function Dashboard({
   view: "grid" | "list";
   groupBySet: boolean;
   version: string;
+  locale: Locale;
 }) {
+  const t = useTranslations("Dashboard");
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -110,14 +116,14 @@ export default function Dashboard({
       const res = await fetch("/api/scan", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) {
-        setScanError(data.error || "Falha ao processar a foto");
+        setScanError(data.error || t("scanErrorGeneric"));
         return;
       }
 
       const candidates: ScanCandidate[] = data.candidates ?? [];
       const top = candidates[0];
       if (!top) {
-        setScanError("Não foi possível identificar a carta. Tente buscar manualmente.");
+        setScanError(t("scanErrorNoCandidates"));
         return;
       }
 
@@ -128,15 +134,15 @@ export default function Dashboard({
       if (top.matchedByCode) {
         setSearchInput(top.cardSetId);
         updateParam("search", top.cardSetId);
-        setScanNotice(`Carta identificada pelo código: ${top.cardName} (${top.cardSetId}) — não é essa? ajuste a busca acima.`);
+        setScanNotice(t("scanNoticeByCode", { name: top.cardName, code: top.cardSetId }));
       } else {
         const searchTerm = stripVariantSuffix(top.cardName);
         setSearchInput(searchTerm);
         updateParam("search", searchTerm);
-        setScanNotice(`Código não identificado com confiança — buscando por nome: "${searchTerm}". Ajuste a busca acima se não for essa.`);
+        setScanNotice(t("scanNoticeByName", { term: searchTerm }));
       }
     } catch {
-      setScanError("Falha ao enviar a foto");
+      setScanError(t("scanErrorUpload"));
     } finally {
       setScanning(false);
     }
@@ -158,21 +164,24 @@ export default function Dashboard({
           return acc;
         }, {})
       ).sort(([a], [b]) => a.localeCompare(b))
-    : [["Todas as cartas", cards]];
+    : [[t("allCardsGroup"), cards]];
 
   return (
     <div style={{ fontFamily: "sans-serif", padding: 24, maxWidth: 1400, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <h1 style={{ marginBottom: 4 }}>OPTCG Collection Manager</h1>
+          <h1 style={{ marginBottom: 4 }}>{t("title")}</h1>
           <span style={{ fontSize: 12, color: "#999" }}>v{version}</span>
         </div>
-        <a href="/scan" style={{ fontSize: 13, whiteSpace: "nowrap" }}>
-          📷 Escanear e adicionar à coleção
-        </a>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <LocaleSwitcher current={locale} />
+          <a href="/scan" style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+            {t("scanAndAddLink")}
+          </a>
+        </div>
       </div>
       <p style={{ color: "#888", marginTop: 0, marginBottom: 20 }}>
-        {cards.length} carta(s) encontradas {isPending && "— atualizando..."}
+        {t("cardsFound", { count: cards.length })} {isPending && t("updating")}
       </p>
 
       <form
@@ -185,10 +194,10 @@ export default function Dashboard({
         <input
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Buscar por nome, código (ex: OP01-001) ou texto do efeito..."
+          placeholder={t("searchPlaceholder")}
           style={{ padding: 8, width: 380, marginRight: 8 }}
         />
-        <button type="submit">Buscar</button>
+        <button type="submit">{t("searchButton")}</button>
         {currentParams.search && (
           <button
             type="button"
@@ -198,7 +207,7 @@ export default function Dashboard({
             }}
             style={{ marginLeft: 8 }}
           >
-            Limpar busca
+            {t("clearSearch")}
           </button>
         )}
         <label
@@ -213,7 +222,7 @@ export default function Dashboard({
             opacity: scanning ? 0.6 : 1,
           }}
         >
-          📷 {scanning ? "Identificando..." : "Escanear pra buscar"}
+          📷 {scanning ? t("scanToSearchIdentifying") : t("scanToSearchLabel")}
           <input
             type="file"
             accept="image/*"
@@ -233,7 +242,7 @@ export default function Dashboard({
           value={currentParams.color || ""}
           onChange={(e) => updateParam("color", e.target.value || null)}
         >
-          <option value="">Cor: todas</option>
+          <option value="">{t("filterColorAll")}</option>
           {filterOptions.colors.map((c) => (
             <option key={c.value} value={c.value}>
               {c.label}
@@ -245,7 +254,7 @@ export default function Dashboard({
           value={currentParams.rarity || ""}
           onChange={(e) => updateParam("rarity", e.target.value || null)}
         >
-          <option value="">Raridade: todas</option>
+          <option value="">{t("filterRarityAll")}</option>
           {filterOptions.rarities.map((r) => (
             <option key={r} value={r}>
               {r}
@@ -257,10 +266,10 @@ export default function Dashboard({
           value={currentParams.type || ""}
           onChange={(e) => updateParam("type", e.target.value || null)}
         >
-          <option value="">Tipo: todos</option>
-          {filterOptions.types.map((t) => (
-            <option key={t} value={t}>
-              {t}
+          <option value="">{t("filterTypeAll")}</option>
+          {filterOptions.types.map((typeOption) => (
+            <option key={typeOption} value={typeOption}>
+              {typeOption}
             </option>
           ))}
         </select>
@@ -269,7 +278,7 @@ export default function Dashboard({
           value={currentParams.set || ""}
           onChange={(e) => updateParam("set", e.target.value || null)}
         >
-          <option value="">Set: todos</option>
+          <option value="">{t("filterSetAll")}</option>
           {filterOptions.sets.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -279,28 +288,28 @@ export default function Dashboard({
 
         <input
           type="number"
-          placeholder="Custo mín."
+          placeholder={t("costMinPlaceholder")}
           value={currentParams.costMin || ""}
           onChange={(e) => updateParam("costMin", e.target.value || null)}
           style={{ width: 90 }}
         />
         <input
           type="number"
-          placeholder="Custo máx."
+          placeholder={t("costMaxPlaceholder")}
           value={currentParams.costMax || ""}
           onChange={(e) => updateParam("costMax", e.target.value || null)}
           style={{ width: 90 }}
         />
         <input
           type="number"
-          placeholder="Poder mín."
+          placeholder={t("powerMinPlaceholder")}
           value={currentParams.powerMin || ""}
           onChange={(e) => updateParam("powerMin", e.target.value || null)}
           style={{ width: 90 }}
         />
         <input
           type="number"
-          placeholder="Poder máx."
+          placeholder={t("powerMaxPlaceholder")}
           value={currentParams.powerMax || ""}
           onChange={(e) => updateParam("powerMax", e.target.value || null)}
           style={{ width: 90 }}
@@ -310,13 +319,13 @@ export default function Dashboard({
           value={currentParams.sort || "code"}
           onChange={(e) => updateParam("sort", e.target.value)}
         >
-          <option value="code">Ordenar: código</option>
-          <option value="name">Ordenar: nome</option>
-          <option value="cost">Ordenar: custo</option>
-          <option value="power">Ordenar: poder</option>
-          <option value="rarity">Ordenar: raridade</option>
-          <option value="set">Ordenar: set</option>
-          <option value="dateAdded">Ordenar: sincronizado recentemente</option>
+          <option value="code">{t("sortCode")}</option>
+          <option value="name">{t("sortName")}</option>
+          <option value="cost">{t("sortCost")}</option>
+          <option value="power">{t("sortPower")}</option>
+          <option value="rarity">{t("sortRarity")}</option>
+          <option value="set">{t("sortSet")}</option>
+          <option value="dateAdded">{t("sortDateAdded")}</option>
         </select>
       </div>
 
@@ -327,7 +336,7 @@ export default function Dashboard({
             checked={currentParams.owned === "1"}
             onChange={() => toggleParam("owned")}
           />{" "}
-          Só na minha coleção
+          {t("onlyOwned")}
         </label>
         <label>
           <input
@@ -335,7 +344,7 @@ export default function Dashboard({
             checked={currentParams.duplicates === "1"}
             onChange={() => toggleParam("duplicates")}
           />{" "}
-          Só duplicatas
+          {t("onlyDuplicates")}
         </label>
         <label>
           <input
@@ -343,7 +352,7 @@ export default function Dashboard({
             checked={currentParams.wantsTrade === "1"}
             onChange={() => toggleParam("wantsTrade")}
           />{" "}
-          Só "quero trocar"
+          {t("onlyWantsTrade")}
         </label>
         <label>
           <input
@@ -351,7 +360,7 @@ export default function Dashboard({
             checked={currentParams.inDeck === "1"}
             onChange={() => toggleParam("inDeck")}
           />{" "}
-          Só em algum deck
+          {t("onlyInDeck")}
         </label>
         <label>
           <input
@@ -359,20 +368,20 @@ export default function Dashboard({
             checked={currentParams.counter === "1"}
             onChange={() => toggleParam("counter")}
           />{" "}
-          Só com counter
+          {t("onlyCounter")}
         </label>
         <label>
           <input type="checkbox" checked={groupBySet} onChange={() => toggleParam("groupBySet")} />{" "}
-          Agrupar por set
+          {t("groupBySet")}
         </label>
       </div>
 
       <div style={{ marginBottom: 20 }}>
         <button onClick={() => updateParam("view", "grid")} disabled={view === "grid"}>
-          🔳 Grade
+          {t("viewGrid")}
         </button>{" "}
         <button onClick={() => updateParam("view", "list")} disabled={view === "list"}>
-          📋 Lista
+          {t("viewList")}
         </button>
       </div>
 
@@ -381,7 +390,7 @@ export default function Dashboard({
           {groupBySet && <h2 style={{ borderBottom: "1px solid #ddd", paddingBottom: 4 }}>{groupName}</h2>}
 
           {groupCards.length === 0 ? (
-            <p style={{ color: "#888" }}>Nenhuma carta encontrada com esses filtros.</p>
+            <p style={{ color: "#888" }}>{t("noCardsFound")}</p>
           ) : view === "grid" ? (
             <div
               style={{
@@ -403,16 +412,16 @@ export default function Dashboard({
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ textAlign: "left", borderBottom: "2px solid #ccc" }}>
-                  <th style={{ padding: 6 }}>Nome</th>
-                  <th style={{ padding: 6 }}>Código</th>
-                  <th style={{ padding: 6 }}>Cor</th>
-                  <th style={{ padding: 6 }}>Tipo</th>
-                  <th style={{ padding: 6 }}>Raridade</th>
-                  <th style={{ padding: 6 }}>Custo</th>
-                  <th style={{ padding: 6 }}>Poder</th>
-                  <th style={{ padding: 6 }}>Qtd</th>
-                  <th style={{ padding: 6 }}>Em deck</th>
-                  <th style={{ padding: 6 }}>Ações</th>
+                  <th style={{ padding: 6 }}>{t("colName")}</th>
+                  <th style={{ padding: 6 }}>{t("colCode")}</th>
+                  <th style={{ padding: 6 }}>{t("colColor")}</th>
+                  <th style={{ padding: 6 }}>{t("colType")}</th>
+                  <th style={{ padding: 6 }}>{t("colRarity")}</th>
+                  <th style={{ padding: 6 }}>{t("colCost")}</th>
+                  <th style={{ padding: 6 }}>{t("colPower")}</th>
+                  <th style={{ padding: 6 }}>{t("colQty")}</th>
+                  <th style={{ padding: 6 }}>{t("colInDeck")}</th>
+                  <th style={{ padding: 6 }}>{t("colActions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -439,13 +448,15 @@ function CardTile({
   onMutate: (id: string, action: string) => void;
   onEnlarge: (card: CardWithCollectionInfo) => void;
 }) {
+  const t = useTranslations("Dashboard");
+
   return (
     <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 8, textAlign: "center" }}>
       {card.localImagePath ? (
         <button
           type="button"
           onClick={() => onEnlarge(card)}
-          title="Ver imagem maior"
+          title={t("viewLargerImage")}
           style={{
             all: "unset",
             display: "block",
@@ -464,27 +475,25 @@ function CardTile({
       <div style={{ fontSize: 11, minHeight: 14, marginTop: 2 }}>
         {card.quantity > 0 && (
           <span>
-            Qtd: {card.quantity}
-            {card.quantity > 1 && " · duplicata"}
+            {t("quantityLabel", { count: card.quantity })}
+            {card.quantity > 1 && t("duplicateSuffixFull")}
           </span>
         )}
       </div>
       {card.allocatedInDecks > 0 && (
-        <div style={{ fontSize: 11, color: "#555" }}>
-          {card.allocatedInDecks} em deck{card.allocatedInDecks > 1 ? "s" : ""}
-        </div>
+        <div style={{ fontSize: 11, color: "#555" }}>{t("inDeckCount", { count: card.allocatedInDecks })}</div>
       )}
 
       <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 6 }}>
-        <button onClick={() => onMutate(card.cardImageId, "decrement")} title="Remover 1">
+        <button onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>
           −
         </button>
-        <button onClick={() => onMutate(card.cardImageId, "increment")} title="Adicionar 1">
+        <button onClick={() => onMutate(card.cardImageId, "increment")} title={t("addOne")}>
           +
         </button>
         <button
           onClick={() => onMutate(card.cardImageId, "toggleWantsTrade")}
-          title="Quero trocar"
+          title={t("wantsTrade")}
           style={{ opacity: card.wantsTrade ? 1 : 0.35 }}
         >
           🔁
@@ -496,7 +505,7 @@ function CardTile({
         rel="noreferrer"
         style={{ fontSize: 11, display: "block", marginTop: 6 }}
       >
-        Ver no Cardmarket ↗
+        {t("viewOnCardmarket")}
       </a>
     </div>
   );
@@ -509,6 +518,8 @@ function CardRow({
   card: CardWithCollectionInfo;
   onMutate: (id: string, action: string) => void;
 }) {
+  const t = useTranslations("Dashboard");
+
   return (
     <tr style={{ borderBottom: "1px solid #eee" }}>
       <td style={{ padding: 6 }}>
@@ -524,7 +535,7 @@ function CardRow({
       <td style={{ padding: 6 }}>{card.cardPower ?? "-"}</td>
       <td style={{ padding: 6 }}>
         {card.quantity}
-        {card.quantity > 1 ? " · dup" : ""}
+        {card.quantity > 1 ? t("duplicateSuffixShort") : ""}
       </td>
       <td style={{ padding: 6 }}>{card.allocatedInDecks > 0 ? card.allocatedInDecks : "-"}</td>
       <td style={{ padding: 6, whiteSpace: "nowrap" }}>
@@ -551,6 +562,8 @@ function CardImageModal({
   card: CardWithCollectionInfo;
   onClose: () => void;
 }) {
+  const tCommon = useTranslations("Common");
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -570,7 +583,7 @@ function CardImageModal({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Fechar"
+          aria-label={tCommon("close")}
           style={{
             position: "absolute",
             top: 8,

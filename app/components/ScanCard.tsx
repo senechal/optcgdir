@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import { useTranslations } from "next-intl";
 import CardImage from "./CardImage";
+import LocaleSwitcher from "./LocaleSwitcher";
+import type { Locale } from "../i18n/request";
 
 type CardCandidate = {
   cardImageId: string;
@@ -15,7 +18,8 @@ type CardCandidate = {
   score: number;
 };
 
-export default function ScanCard() {
+export default function ScanCard({ locale }: { locale: Locale }) {
+  const t = useTranslations("Scan");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,13 +43,13 @@ export default function ScanCard() {
       const res = await fetch("/api/scan", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Falha ao processar a foto");
+        setError(data.error || t("errorGeneric"));
         return;
       }
       setExtractedText(data.extractedText ?? "");
       setCandidates(data.candidates ?? []);
     } catch {
-      setError("Falha ao enviar a foto");
+      setError(t("errorUpload"));
     } finally {
       setLoading(false);
     }
@@ -68,10 +72,11 @@ export default function ScanCard() {
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", padding: 16 }}>
-      <h1 style={{ fontSize: 20 }}>📷 Escanear carta</h1>
-      <p style={{ fontSize: 13, color: "#888" }}>
-        Tire uma foto da carta — tente deixar ela bem enquadrada e iluminada.
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h1 style={{ fontSize: 20 }}>{t("title")}</h1>
+        <LocaleSwitcher current={locale} />
+      </div>
+      <p style={{ fontSize: 13, color: "#888" }}>{t("instructions")}</p>
 
       <input
         type="file"
@@ -85,30 +90,27 @@ export default function ScanCard() {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={previewUrl}
-          alt="Foto da carta"
+          alt={t("photoAlt")}
           style={{ width: "100%", maxWidth: 240, borderRadius: 8, marginBottom: 12, display: "block" }}
         />
       )}
 
-      {loading && <p>Processando foto...</p>}
+      {loading && <p>{t("processing")}</p>}
       {error && <p style={{ color: "#c00" }}>{error}</p>}
-      {confirmedName && (
-        <p style={{ color: "#080" }}>
-          &quot;{confirmedName}&quot; adicionada à coleção! Pode escanear a próxima.
-        </p>
-      )}
+      {confirmedName && <p style={{ color: "#080" }}>{t("confirmed", { name: confirmedName })}</p>}
 
       {candidates && candidates.length === 0 && !loading && (
         <div>
-          <p style={{ color: "#888" }}>Nenhum match confiável encontrado.</p>
-          <a href={manualSearchHref}>Buscar manualmente no catálogo →</a>
+          <p style={{ color: "#888" }}>{t("noMatch")}</p>
+          <a href={manualSearchHref}>{t("searchManuallyLink")}</a>
         </div>
       )}
 
       {candidates && candidates.length > 0 && (
         <div>
           <p style={{ fontSize: 13, color: "#888" }}>
-            Não é a carta certa? <a href={manualSearchHref}>buscar manualmente</a>.
+            {t("notRightCard")}
+            <a href={manualSearchHref}>{t("searchManually")}</a>.
           </p>
           <div
             style={{
@@ -130,7 +132,7 @@ export default function ScanCard() {
                 <div style={{ fontSize: 12, marginTop: 4, fontWeight: 600 }}>{card.cardName}</div>
                 <div style={{ fontSize: 11, color: "#888" }}>{card.cardSetId}</div>
                 <button onClick={() => confirmCard(card)} style={{ marginTop: 6 }}>
-                  Confirmar
+                  {t("confirm")}
                 </button>
               </div>
             ))}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useTransition, type ChangeEvent } from "react";
+import { useEffect, useState, useTransition, type ChangeEvent } from "react";
+import Image from "next/image";
 import CardImage from "./CardImage";
 
 type ScanCandidate = {
@@ -76,6 +77,7 @@ export default function Dashboard({
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const [enlargedCard, setEnlargedCard] = useState<CardWithCollectionInfo | null>(null);
 
   function updateParam(key: string, value: string | null) {
     const next: Record<string, string> = { ...currentParams };
@@ -390,7 +392,12 @@ export default function Dashboard({
               }}
             >
               {groupCards.map((card) => (
-                <CardTile key={card.cardImageId} card={card} onMutate={mutateCollection} />
+                <CardTile
+                  key={card.cardImageId}
+                  card={card}
+                  onMutate={mutateCollection}
+                  onEnlarge={setEnlargedCard}
+                />
               ))}
             </div>
           ) : (
@@ -418,6 +425,8 @@ export default function Dashboard({
           )}
         </section>
       ))}
+
+      {enlargedCard && <CardImageModal card={enlargedCard} onClose={() => setEnlargedCard(null)} />}
     </div>
   );
 }
@@ -425,14 +434,28 @@ export default function Dashboard({
 function CardTile({
   card,
   onMutate,
+  onEnlarge,
 }: {
   card: CardWithCollectionInfo;
   onMutate: (id: string, action: string) => void;
+  onEnlarge: (card: CardWithCollectionInfo) => void;
 }) {
   return (
     <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 8, textAlign: "center" }}>
       {card.localImagePath ? (
-        <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
+        <button
+          type="button"
+          onClick={() => onEnlarge(card)}
+          title="Ver imagem maior"
+          style={{
+            all: "unset",
+            display: "block",
+            width: "100%",
+            cursor: "pointer",
+          }}
+        >
+          <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
+        </button>
       ) : (
         <div style={{ aspectRatio: "63 / 88", background: "#eee", borderRadius: 4 }} />
       )}
@@ -516,5 +539,107 @@ function CardRow({
         </button>
       </td>
     </tr>
+  );
+}
+
+// Modal centralizado em telas largas, drawer colado na base em telas
+// estreitas (mesmo componente — só muda via media query no CSS, sem
+// precisar detectar o device em JS).
+function CardImageModal({
+  card,
+  onClose,
+}: {
+  card: CardWithCollectionInfo;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div className="card-modal-backdrop" onClick={onClose}>
+      <div className="card-modal-panel" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar"
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            zIndex: 1,
+            border: "none",
+            background: "rgba(0,0,0,0.06)",
+            borderRadius: "50%",
+            width: 28,
+            height: 28,
+            fontSize: 16,
+            lineHeight: 1,
+            cursor: "pointer",
+          }}
+        >
+          ✕
+        </button>
+        {card.localImagePath ? (
+          <div style={{ position: "relative", width: "100%", aspectRatio: "63 / 88" }}>
+            <Image
+              src={`/api/catalog-image/${card.localImagePath}`}
+              alt={card.cardName}
+              fill
+              sizes="(max-width: 600px) 100vw, 420px"
+              style={{ objectFit: "contain" }}
+            />
+          </div>
+        ) : (
+          <div style={{ aspectRatio: "63 / 88", background: "#eee", borderRadius: 8 }} />
+        )}
+        <div style={{ marginTop: 10, fontWeight: 600 }}>{card.cardName}</div>
+        <div style={{ fontSize: 12, color: "#888" }}>{card.cardSetId}</div>
+      </div>
+
+      <style jsx>{`
+        .card-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.6);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .card-modal-panel {
+          position: relative;
+          background: #fff;
+          border-radius: 12px;
+          padding: 16px;
+          width: 100%;
+          max-width: 420px;
+          max-height: 90vh;
+          overflow-y: auto;
+          text-align: center;
+        }
+        @media (max-width: 600px) {
+          .card-modal-backdrop {
+            align-items: flex-end;
+            padding: 0;
+          }
+          .card-modal-panel {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: 16px 16px 0 0;
+          }
+        }
+      `}</style>
+    </div>
   );
 }

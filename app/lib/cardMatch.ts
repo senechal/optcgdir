@@ -14,7 +14,7 @@ export type MatchableCard = {
   localImagePath: string | null;
 };
 
-export type CardMatch = MatchableCard & { score: number };
+export type CardMatch = MatchableCard & { score: number; matchedByCode: boolean };
 
 // Hífen fica opcional: o OCR do rodapé da carta (canto onde o código fica
 // impresso, ex: "OP12-001") frequentemente perde esse traço na binarização
@@ -105,11 +105,12 @@ export function rankCardsByOcrText(
   const scored: CardMatch[] = cards.map((card) => {
     const normalizedName = normalize(card.cardName);
     const codeSimilarity = bestCodeSimilarity(codeCandidates, card.cardSetId.replace(/-/g, ""));
-    const codeBonus = codeSimilarity >= CODE_SIMILARITY_THRESHOLD ? codeSimilarity * 100 : 0;
+    const matchedByCode = codeSimilarity >= CODE_SIMILARITY_THRESHOLD;
+    const codeBonus = matchedByCode ? codeSimilarity * 100 : 0;
     const tokenRatio = tokenOverlapRatio(normalizedName, ocrBlob);
     const lineSim = bestLineSimilarity(normalizedName, ocrLines);
     const score = codeBonus + tokenRatio * 40 + lineSim * 30;
-    return { ...card, score };
+    return { ...card, score, matchedByCode };
   });
 
   return scored

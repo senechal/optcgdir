@@ -214,9 +214,10 @@ export default function Dashboard({
         />
 
         <select
-          value={currentParams.sort || "name"}
+          value={currentParams.sort || "code"}
           onChange={(e) => updateParam("sort", e.target.value)}
         >
+          <option value="code">Ordenar: código</option>
           <option value="name">Ordenar: nome</option>
           <option value="cost">Ordenar: custo</option>
           <option value="power">Ordenar: poder</option>

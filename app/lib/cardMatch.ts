@@ -16,7 +16,11 @@ export type MatchableCard = {
 
 export type CardMatch = MatchableCard & { score: number };
 
-const CARD_CODE_PATTERN = /[A-Z]{1,4}\d{0,2}-\d{3}/g;
+// Hífen fica opcional: o OCR do rodapé da carta (canto onde o código fica
+// impresso, ex: "OP12-001") frequentemente perde esse traço na binarização
+// — quem compara os dois lados remove o hífen antes, então não faz
+// diferença se o texto reconhecido veio como "OP12001" ou "OP12-001".
+const CARD_CODE_PATTERN = /[A-Z]{1,4}\d{0,2}-?\d{3}/g;
 
 function normalize(text: string): string {
   return text
@@ -66,6 +70,14 @@ function bestLineSimilarity(cardName: string, ocrLines: string[]): number {
   return best;
 }
 
+function bestCodeSimilarity(candidates: string[], code: string): number {
+  let best = 0;
+  for (const candidate of candidates) {
+    best = Math.max(best, similarity(candidate, code));
+  }
+  return best;
+}
+
 function tokenOverlapRatio(cardName: string, ocrBlob: string): number {
   const tokens = cardName.split(" ").filter((t) => t.length >= 3);
   if (tokens.length === 0) return 0;
@@ -78,13 +90,22 @@ export function rankCardsByOcrText(
   cards: MatchableCard[],
   limit = 8
 ): CardMatch[] {
-  const codeMatches = new Set(ocrText.toUpperCase().match(CARD_CODE_PATTERN) ?? []);
+  const codeCandidates = (ocrText.toUpperCase().match(CARD_CODE_PATTERN) ?? []).map((code) =>
+    code.replace(/-/g, "")
+  );
   const ocrBlob = normalize(ocrText);
   const ocrLines = ocrText.split(/\r?\n/).map(normalize);
 
+  // Match exato ideal, mas o OCR de um canto pequeno da carta erra 1
+  // caractere com facilidade (ex: "O" lido como "Q") — aceita quase-match
+  // em vez de exigir igualdade perfeita, senão esse erro sozinho já
+  // descarta o candidato certo.
+  const CODE_SIMILARITY_THRESHOLD = 0.8;
+
   const scored: CardMatch[] = cards.map((card) => {
     const normalizedName = normalize(card.cardName);
-    const codeBonus = codeMatches.has(card.cardSetId) ? 100 : 0;
+    const codeSimilarity = bestCodeSimilarity(codeCandidates, card.cardSetId.replace(/-/g, ""));
+    const codeBonus = codeSimilarity >= CODE_SIMILARITY_THRESHOLD ? codeSimilarity * 100 : 0;
     const tokenRatio = tokenOverlapRatio(normalizedName, ocrBlob);
     const lineSim = bestLineSimilarity(normalizedName, ocrLines);
     const score = codeBonus + tokenRatio * 40 + lineSim * 30;

@@ -16,7 +16,6 @@
   },
   "Dashboard": {
     "title": "OPTCG Collection Manager",
-    "scanAndAddLink": "📷 Scan and add to collection",
     "cardsFound": "{count, plural, one {# card found} other {# cards found}}",
     "updating": "— updating...",
     "searchPlaceholder": "Search by name, code (e.g. OP01-001) or card text...",
@@ -73,20 +72,6 @@
     "addOne": "Add 1",
     "wantsTrade": "Want to trade",
     "viewOnCardmarket": "View on Cardmarket ↗"
-  },
-  "Scan": {
-    "title": "📷 Scan card",
-    "instructions": "Take a photo of the card — try to keep it well framed and lit.",
-    "photoAlt": "Card photo",
-    "processing": "Processing photo...",
-    "confirmed": "\"{name}\" added to collection! You can scan the next one.",
-    "noMatch": "No confident match found.",
-    "searchManuallyLink": "Search manually in the catalog →",
-    "notRightCard": "Not the right card? ",
-    "searchManually": "search manually",
-    "confirm": "Confirm",
-    "errorGeneric": "Failed to process the photo",
-    "errorUpload": "Failed to upload the photo"
   },
   "ScanApi": {
     "noPhotoSent": "No photo sent",

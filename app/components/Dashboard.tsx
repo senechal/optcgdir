@@ -173,12 +173,7 @@ export default function Dashboard({
           <h1 style={{ marginBottom: 4 }}>{t("title")}</h1>
           <span style={{ fontSize: 12, color: "#999" }}>v{version}</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <LocaleSwitcher current={locale} />
-          <a href="/scan" style={{ fontSize: 13, whiteSpace: "nowrap" }}>
-            {t("scanAndAddLink")}
-          </a>
-        </div>
+        <LocaleSwitcher current={locale} />
       </div>
       <p style={{ color: "#888", marginTop: 0, marginBottom: 20 }}>
         {t("cardsFound", { count: cards.length })} {isPending && t("updating")}

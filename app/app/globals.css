@@ -1,0 +1,146 @@
+/* Design tokens — paleta neutra, foco em legibilidade (sem "tema" do jogo).
+   Breakpoints usados no resto do app (media queries não usam variáveis CSS,
+   então documentamos aqui pra manter consistência): mobile <600px (padrão,
+   mobile-first), tablet >=600px, desktop >=900px. */
+:root {
+  /* Cores */
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f6f6f8;
+  --color-surface: #ffffff;
+  --color-border: #e3e3e7;
+  --color-border-strong: #cfcfd6;
+  --color-text: #1a1a1e;
+  --color-text-secondary: #6b6b74;
+  --color-text-tertiary: #9a9aa3;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-subtle: #eaf0fe;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-focus-ring: rgba(37, 99, 235, 0.35);
+
+  /* Espaçamento (base 4px) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Tipografia */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+
+  /* Cantos e sombras */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+  --shadow-sm: 0 1px 2px rgba(20, 20, 30, 0.06);
+  --shadow-md: 0 4px 16px rgba(20, 20, 30, 0.08);
+  --shadow-lg: 0 12px 32px rgba(20, 20, 30, 0.18);
+
+  /* Alvo de toque mínimo recomendado (Apple/Google: ~44px) */
+  --touch-target: 44px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  color: var(--color-text);
+  background: var(--color-bg-subtle);
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+select,
+input,
+textarea {
+  font-family: inherit;
+  /* 16px trava o zoom automático que o iOS Safari faz ao focar um campo
+     menor que isso — sem isso, todo toque num input dá um "pulo" de zoom. */
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+button {
+  cursor: pointer;
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+button:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+select,
+input[type="text"],
+input[type="number"],
+input[type="search"] {
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-accent);
+  vertical-align: middle;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

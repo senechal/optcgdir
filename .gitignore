@@ -1,5 +1,8 @@
 node_modules/
 .next/
 .env
+.env.local
 data/
+local-data/
+docker-compose.override.yml
 *.log

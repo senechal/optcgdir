@@ -43,6 +43,7 @@
     "sortRarity": "Sort: rarity",
     "sortSet": "Sort: set",
     "sortDateAdded": "Sort: recently synced",
+    "filtersToggle": "Filters",
     "onlyOwned": "Only in my collection",
     "onlyDuplicates": "Only duplicates",
     "onlyWantsTrade": "Only \"want to trade\"",

@@ -83,6 +83,25 @@ export default function Dashboard({
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
   const [enlargedCard, setEnlargedCard] = useState<CardWithCollectionInfo | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Contagem de filtros ativos pro badge do botão "Filtros" — assim dá pra
+  // saber que tem filtro aplicado sem precisar abrir o painel colapsado.
+  const activeFilterCount = [
+    currentParams.color,
+    currentParams.rarity,
+    currentParams.type,
+    currentParams.set,
+    currentParams.costMin,
+    currentParams.costMax,
+    currentParams.powerMin,
+    currentParams.powerMax,
+    currentParams.owned,
+    currentParams.duplicates,
+    currentParams.wantsTrade,
+    currentParams.inDeck,
+    currentParams.counter,
+  ].filter(Boolean).length;
 
   function updateParam(key: string, value: string | null) {
     const next: Record<string, string> = { ...currentParams };
@@ -167,7 +186,7 @@ export default function Dashboard({
     : [[t("allCardsGroup"), cards]];
 
   return (
-    <div style={{ fontFamily: "sans-serif", padding: 24, maxWidth: 1400, margin: "0 auto" }}>
+    <div className="dashboard-container">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <h1 style={{ marginBottom: 4 }}>{t("title")}</h1>
@@ -180,17 +199,17 @@ export default function Dashboard({
       </p>
 
       <form
+        className="search-row"
         onSubmit={(e) => {
           e.preventDefault();
           updateParam("search", searchInput || null);
         }}
-        style={{ marginBottom: 4 }}
       >
         <input
+          className="search-input"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder={t("searchPlaceholder")}
-          style={{ padding: 8, width: 380, marginRight: 8 }}
         />
         <button type="submit">{t("searchButton")}</button>
         {currentParams.search && (
@@ -200,20 +219,14 @@ export default function Dashboard({
               setSearchInput("");
               updateParam("search", null);
             }}
-            style={{ marginLeft: 8 }}
           >
             {t("clearSearch")}
           </button>
         )}
         <label
+          className="scan-label"
           style={{
-            display: "inline-block",
-            padding: "7px 12px",
-            marginLeft: 8,
-            border: "1px solid #ccc",
-            borderRadius: 4,
             cursor: scanning ? "default" : "pointer",
-            fontSize: 14,
             opacity: scanning ? 0.6 : 1,
           }}
         >
@@ -228,88 +241,11 @@ export default function Dashboard({
           />
         </label>
       </form>
-      {scanNotice && <p style={{ fontSize: 13, color: "#080", marginTop: 4, marginBottom: 16 }}>{scanNotice}</p>}
-      {scanError && <p style={{ fontSize: 13, color: "#c00", marginTop: 4, marginBottom: 16 }}>{scanError}</p>}
+      {scanNotice && <p style={{ fontSize: 13, color: "var(--color-success)", marginTop: 4, marginBottom: 16 }}>{scanNotice}</p>}
+      {scanError && <p style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 4, marginBottom: 16 }}>{scanError}</p>}
       {!scanNotice && !scanError && <div style={{ marginBottom: 16 }} />}
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-        <select
-          value={currentParams.color || ""}
-          onChange={(e) => updateParam("color", e.target.value || null)}
-        >
-          <option value="">{t("filterColorAll")}</option>
-          {filterOptions.colors.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={currentParams.rarity || ""}
-          onChange={(e) => updateParam("rarity", e.target.value || null)}
-        >
-          <option value="">{t("filterRarityAll")}</option>
-          {filterOptions.rarities.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={currentParams.type || ""}
-          onChange={(e) => updateParam("type", e.target.value || null)}
-        >
-          <option value="">{t("filterTypeAll")}</option>
-          {filterOptions.types.map((typeOption) => (
-            <option key={typeOption} value={typeOption}>
-              {typeOption}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={currentParams.set || ""}
-          onChange={(e) => updateParam("set", e.target.value || null)}
-        >
-          <option value="">{t("filterSetAll")}</option>
-          {filterOptions.sets.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="number"
-          placeholder={t("costMinPlaceholder")}
-          value={currentParams.costMin || ""}
-          onChange={(e) => updateParam("costMin", e.target.value || null)}
-          style={{ width: 90 }}
-        />
-        <input
-          type="number"
-          placeholder={t("costMaxPlaceholder")}
-          value={currentParams.costMax || ""}
-          onChange={(e) => updateParam("costMax", e.target.value || null)}
-          style={{ width: 90 }}
-        />
-        <input
-          type="number"
-          placeholder={t("powerMinPlaceholder")}
-          value={currentParams.powerMin || ""}
-          onChange={(e) => updateParam("powerMin", e.target.value || null)}
-          style={{ width: 90 }}
-        />
-        <input
-          type="number"
-          placeholder={t("powerMaxPlaceholder")}
-          value={currentParams.powerMax || ""}
-          onChange={(e) => updateParam("powerMax", e.target.value || null)}
-          style={{ width: 90 }}
-        />
-
+      <div className="toolbar-row">
         <select
           value={currentParams.sort || "code"}
           onChange={(e) => updateParam("sort", e.target.value)}
@@ -322,63 +258,148 @@ export default function Dashboard({
           <option value="set">{t("sortSet")}</option>
           <option value="dateAdded">{t("sortDateAdded")}</option>
         </select>
-      </div>
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16, fontSize: 14 }}>
-        <label>
-          <input
-            type="checkbox"
-            checked={currentParams.owned === "1"}
-            onChange={() => toggleParam("owned")}
-          />{" "}
-          {t("onlyOwned")}
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={currentParams.duplicates === "1"}
-            onChange={() => toggleParam("duplicates")}
-          />{" "}
-          {t("onlyDuplicates")}
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={currentParams.wantsTrade === "1"}
-            onChange={() => toggleParam("wantsTrade")}
-          />{" "}
-          {t("onlyWantsTrade")}
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={currentParams.inDeck === "1"}
-            onChange={() => toggleParam("inDeck")}
-          />{" "}
-          {t("onlyInDeck")}
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={currentParams.counter === "1"}
-            onChange={() => toggleParam("counter")}
-          />{" "}
-          {t("onlyCounter")}
-        </label>
-        <label>
-          <input type="checkbox" checked={groupBySet} onChange={() => toggleParam("groupBySet")} />{" "}
-          {t("groupBySet")}
-        </label>
-      </div>
-
-      <div style={{ marginBottom: 20 }}>
-        <button onClick={() => updateParam("view", "grid")} disabled={view === "grid"}>
-          {t("viewGrid")}
-        </button>{" "}
-        <button onClick={() => updateParam("view", "list")} disabled={view === "list"}>
-          {t("viewList")}
+        <button type="button" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen}>
+          {t("filtersToggle")}
+          {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+          {filtersOpen ? " ▲" : " ▼"}
         </button>
+
+        <div className="view-toggle">
+          <button onClick={() => updateParam("view", "grid")} disabled={view === "grid"}>
+            {t("viewGrid")}
+          </button>
+          <button onClick={() => updateParam("view", "list")} disabled={view === "list"}>
+            {t("viewList")}
+          </button>
+        </div>
       </div>
+
+      {filtersOpen && (
+        <div className="filters-panel">
+          <div className="filters-grid">
+            <select
+              value={currentParams.color || ""}
+              onChange={(e) => updateParam("color", e.target.value || null)}
+            >
+              <option value="">{t("filterColorAll")}</option>
+              {filterOptions.colors.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={currentParams.rarity || ""}
+              onChange={(e) => updateParam("rarity", e.target.value || null)}
+            >
+              <option value="">{t("filterRarityAll")}</option>
+              {filterOptions.rarities.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={currentParams.type || ""}
+              onChange={(e) => updateParam("type", e.target.value || null)}
+            >
+              <option value="">{t("filterTypeAll")}</option>
+              {filterOptions.types.map((typeOption) => (
+                <option key={typeOption} value={typeOption}>
+                  {typeOption}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={currentParams.set || ""}
+              onChange={(e) => updateParam("set", e.target.value || null)}
+            >
+              <option value="">{t("filterSetAll")}</option>
+              {filterOptions.sets.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              placeholder={t("costMinPlaceholder")}
+              value={currentParams.costMin || ""}
+              onChange={(e) => updateParam("costMin", e.target.value || null)}
+            />
+            <input
+              type="number"
+              placeholder={t("costMaxPlaceholder")}
+              value={currentParams.costMax || ""}
+              onChange={(e) => updateParam("costMax", e.target.value || null)}
+            />
+            <input
+              type="number"
+              placeholder={t("powerMinPlaceholder")}
+              value={currentParams.powerMin || ""}
+              onChange={(e) => updateParam("powerMin", e.target.value || null)}
+            />
+            <input
+              type="number"
+              placeholder={t("powerMaxPlaceholder")}
+              value={currentParams.powerMax || ""}
+              onChange={(e) => updateParam("powerMax", e.target.value || null)}
+            />
+          </div>
+
+          <div className="filters-checkboxes">
+            <label>
+              <input
+                type="checkbox"
+                checked={currentParams.owned === "1"}
+                onChange={() => toggleParam("owned")}
+              />{" "}
+              {t("onlyOwned")}
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={currentParams.duplicates === "1"}
+                onChange={() => toggleParam("duplicates")}
+              />{" "}
+              {t("onlyDuplicates")}
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={currentParams.wantsTrade === "1"}
+                onChange={() => toggleParam("wantsTrade")}
+              />{" "}
+              {t("onlyWantsTrade")}
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={currentParams.inDeck === "1"}
+                onChange={() => toggleParam("inDeck")}
+              />{" "}
+              {t("onlyInDeck")}
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={currentParams.counter === "1"}
+                onChange={() => toggleParam("counter")}
+              />{" "}
+              {t("onlyCounter")}
+            </label>
+            <label>
+              <input type="checkbox" checked={groupBySet} onChange={() => toggleParam("groupBySet")} />{" "}
+              {t("groupBySet")}
+            </label>
+          </div>
+        </div>
+      )}
 
       {groupedEntries.map(([groupName, groupCards]) => (
         <section key={groupName} style={{ marginBottom: 32 }}>
@@ -430,6 +451,93 @@ export default function Dashboard({
       ))}
 
       {enlargedCard && <CardImageModal card={enlargedCard} onClose={() => setEnlargedCard(null)} />}
+
+      <style jsx>{`
+        .dashboard-container {
+          font-family: var(--font-sans);
+          padding: var(--space-4);
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+        @media (min-width: 900px) {
+          .dashboard-container {
+            padding: var(--space-6) var(--space-8);
+          }
+        }
+
+        .search-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--space-2);
+          margin-bottom: var(--space-1);
+        }
+        .search-input {
+          flex: 1 1 240px;
+        }
+
+        .scan-label {
+          display: inline-flex;
+          align-items: center;
+          min-height: var(--touch-target);
+          padding: 0 var(--space-4);
+          border: 1px solid var(--color-border-strong);
+          border-radius: var(--radius-md);
+          background: var(--color-surface);
+          font-size: var(--font-size-base);
+          white-space: nowrap;
+        }
+
+        .toolbar-row {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: var(--space-2);
+          margin-bottom: var(--space-3);
+        }
+        .toolbar-row select {
+          flex: 1 1 160px;
+        }
+        .view-toggle {
+          display: flex;
+          gap: var(--space-2);
+          margin-left: auto;
+        }
+
+        .filter-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 5px;
+          margin-left: var(--space-2);
+          border-radius: var(--radius-full);
+          background: var(--color-accent);
+          color: #fff;
+          font-size: var(--font-size-xs);
+          font-weight: 600;
+        }
+
+        .filters-panel {
+          padding: var(--space-4);
+          margin-bottom: var(--space-4);
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-lg);
+          background: var(--color-surface);
+        }
+        .filters-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          gap: var(--space-3);
+          margin-bottom: var(--space-4);
+        }
+        .filters-checkboxes {
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--space-2) var(--space-5);
+          font-size: var(--font-size-sm);
+        }
+      `}</style>
     </div>
   );
 }

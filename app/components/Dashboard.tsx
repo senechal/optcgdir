@@ -40,6 +40,22 @@ type FilterOptions = {
   types: string[];
 };
 
+type DraftFilters = {
+  color: string;
+  rarity: string;
+  type: string;
+  set: string;
+  costMin: string;
+  costMax: string;
+  powerMin: string;
+  powerMax: string;
+  owned: boolean;
+  duplicates: boolean;
+  wantsTrade: boolean;
+  inDeck: boolean;
+  counter: boolean;
+};
+
 // O card_name da optcgapi já vem com sufixos como "(Parallel)" ou
 // "(Alternative Art)" — removemos porque a variante já é representada
 // separadamente (V.1/V.2/Promo no link do Cardmarket, ou porque buscar
@@ -103,12 +119,14 @@ export default function Dashboard({
     currentParams.counter,
   ].filter(Boolean).length;
 
-  function updateParam(key: string, value: string | null) {
+  function updateParams(patch: Record<string, string | null>) {
     const next: Record<string, string> = { ...currentParams };
-    if (value === null || value === "") {
-      delete next[key];
-    } else {
-      next[key] = value;
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null || value === "") {
+        delete next[key];
+      } else {
+        next[key] = value;
+      }
     }
     const qs = new URLSearchParams(next).toString();
     startTransition(() => {
@@ -116,9 +134,107 @@ export default function Dashboard({
     });
   }
 
+  function updateParam(key: string, value: string | null) {
+    updateParams({ [key]: value });
+  }
+
   function toggleParam(key: string) {
     updateParam(key, currentParams[key] === "1" ? null : "1");
   }
+
+  // Filtros do painel colapsável não aplicam na hora — ficam num rascunho
+  // local até o usuário clicar em "Aplicar filtros". Cor/ordenação/busca/
+  // agrupar continuam instantâneos (não são "filtros" que estreitam a
+  // lista, ou já têm sua própria ação de confirmar, como a busca).
+  function buildDraftFilters(params: Record<string, string>): DraftFilters {
+    return {
+      color: params.color || "",
+      rarity: params.rarity || "",
+      type: params.type || "",
+      set: params.set || "",
+      costMin: params.costMin || "",
+      costMax: params.costMax || "",
+      powerMin: params.powerMin || "",
+      powerMax: params.powerMax || "",
+      owned: params.owned === "1",
+      duplicates: params.duplicates === "1",
+      wantsTrade: params.wantsTrade === "1",
+      inDeck: params.inDeck === "1",
+      counter: params.counter === "1",
+    };
+  }
+
+  const [draftFilters, setDraftFilters] = useState<DraftFilters>(() => buildDraftFilters(currentParams));
+
+  // Ressincroniza o rascunho sempre que os filtros de verdade (URL) mudam —
+  // seja porque o usuário clicou em "Aplicar", removeu um pill, ou navegou
+  // de outra forma. Sem isso, reabrir o painel depois de fechar sem aplicar
+  // mostraria uma edição abandonada em vez do que está realmente ativo.
+  useEffect(() => {
+    setDraftFilters(buildDraftFilters(currentParams));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    currentParams.color,
+    currentParams.rarity,
+    currentParams.type,
+    currentParams.set,
+    currentParams.costMin,
+    currentParams.costMax,
+    currentParams.powerMin,
+    currentParams.powerMax,
+    currentParams.owned,
+    currentParams.duplicates,
+    currentParams.wantsTrade,
+    currentParams.inDeck,
+    currentParams.counter,
+  ]);
+
+  function applyDraftFilters() {
+    updateParams({
+      color: draftFilters.color || null,
+      rarity: draftFilters.rarity || null,
+      type: draftFilters.type || null,
+      set: draftFilters.set || null,
+      costMin: draftFilters.costMin || null,
+      costMax: draftFilters.costMax || null,
+      powerMin: draftFilters.powerMin || null,
+      powerMax: draftFilters.powerMax || null,
+      owned: draftFilters.owned ? "1" : null,
+      duplicates: draftFilters.duplicates ? "1" : null,
+      wantsTrade: draftFilters.wantsTrade ? "1" : null,
+      inDeck: draftFilters.inDeck ? "1" : null,
+      counter: draftFilters.counter ? "1" : null,
+    });
+    setFiltersOpen(false);
+  }
+
+  // Pills dos filtros REALMENTE aplicados (vêm da URL, não do rascunho) —
+  // cada um removível na hora, sem precisar abrir o painel nem clicar em
+  // "Aplicar".
+  const filterPills: { key: string; text: string }[] = [];
+  if (currentParams.color) {
+    const label = filterOptions.colors.find((c) => c.value === currentParams.color)?.label ?? currentParams.color;
+    filterPills.push({ key: "color", text: `${t("colColor")}: ${label}` });
+  }
+  if (currentParams.rarity) {
+    filterPills.push({ key: "rarity", text: `${t("colRarity")}: ${currentParams.rarity}` });
+  }
+  if (currentParams.type) {
+    filterPills.push({ key: "type", text: `${t("colType")}: ${currentParams.type}` });
+  }
+  if (currentParams.set) {
+    const label = filterOptions.sets.find((s) => s.id === currentParams.set)?.name ?? currentParams.set;
+    filterPills.push({ key: "set", text: `${t("colSet")}: ${label}` });
+  }
+  if (currentParams.costMin) filterPills.push({ key: "costMin", text: `${t("colCost")} ≥ ${currentParams.costMin}` });
+  if (currentParams.costMax) filterPills.push({ key: "costMax", text: `${t("colCost")} ≤ ${currentParams.costMax}` });
+  if (currentParams.powerMin) filterPills.push({ key: "powerMin", text: `${t("colPower")} ≥ ${currentParams.powerMin}` });
+  if (currentParams.powerMax) filterPills.push({ key: "powerMax", text: `${t("colPower")} ≤ ${currentParams.powerMax}` });
+  if (currentParams.owned === "1") filterPills.push({ key: "owned", text: t("onlyOwned") });
+  if (currentParams.duplicates === "1") filterPills.push({ key: "duplicates", text: t("onlyDuplicates") });
+  if (currentParams.wantsTrade === "1") filterPills.push({ key: "wantsTrade", text: t("onlyWantsTrade") });
+  if (currentParams.inDeck === "1") filterPills.push({ key: "inDeck", text: t("onlyInDeck") });
+  if (currentParams.counter === "1") filterPills.push({ key: "counter", text: t("onlyCounter") });
 
   async function handleScanFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -274,14 +390,32 @@ export default function Dashboard({
             </button>
           </div>
         </div>
+
+        {filterPills.length > 0 && (
+          <div className="filter-pills">
+            {filterPills.map((pill) => (
+              <span key={pill.key} className="filter-pill">
+                {pill.text}
+                <button
+                  type="button"
+                  className="filter-pill-remove"
+                  onClick={() => updateParam(pill.key, null)}
+                  aria-label={t("removeFilter", { filter: pill.text })}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {filtersOpen && (
         <div className="filters-panel">
           <div className="filters-grid">
             <select
-              value={currentParams.color || ""}
-              onChange={(e) => updateParam("color", e.target.value || null)}
+              value={draftFilters.color}
+              onChange={(e) => setDraftFilters((prev) => ({ ...prev, color: e.target.value }))}
             >
               <option value="">{t("filterColorAll")}</option>
               {filterOptions.colors.map((c) => (
@@ -292,8 +426,8 @@ export default function Dashboard({
             </select>
 
             <select
-              value={currentParams.rarity || ""}
-              onChange={(e) => updateParam("rarity", e.target.value || null)}
+              value={draftFilters.rarity}
+              onChange={(e) => setDraftFilters((prev) => ({ ...prev, rarity: e.target.value }))}
             >
               <option value="">{t("filterRarityAll")}</option>
               {filterOptions.rarities.map((r) => (
@@ -304,8 +438,8 @@ export default function Dashboard({
             </select>
 
             <select
-              value={currentParams.type || ""}
-              onChange={(e) => updateParam("type", e.target.value || null)}
+              value={draftFilters.type}
+              onChange={(e) => setDraftFilters((prev) => ({ ...prev, type: e.target.value }))}
             >
               <option value="">{t("filterTypeAll")}</option>
               {filterOptions.types.map((typeOption) => (
@@ -316,8 +450,8 @@ export default function Dashboard({
             </select>
 
             <select
-              value={currentParams.set || ""}
-              onChange={(e) => updateParam("set", e.target.value || null)}
+              value={draftFilters.set}
+              onChange={(e) => setDraftFilters((prev) => ({ ...prev, set: e.target.value }))}
             >
               <option value="">{t("filterSetAll")}</option>
               {filterOptions.sets.map((s) => (
@@ -330,26 +464,26 @@ export default function Dashboard({
             <input
               type="number"
               placeholder={t("costMinPlaceholder")}
-              value={currentParams.costMin || ""}
-              onChange={(e) => updateParam("costMin", e.target.value || null)}
+              value={draftFilters.costMin}
+              onChange={(e) => setDraftFilters((prev) => ({ ...prev, costMin: e.target.value }))}
             />
             <input
               type="number"
               placeholder={t("costMaxPlaceholder")}
-              value={currentParams.costMax || ""}
-              onChange={(e) => updateParam("costMax", e.target.value || null)}
+              value={draftFilters.costMax}
+              onChange={(e) => setDraftFilters((prev) => ({ ...prev, costMax: e.target.value }))}
             />
             <input
               type="number"
               placeholder={t("powerMinPlaceholder")}
-              value={currentParams.powerMin || ""}
-              onChange={(e) => updateParam("powerMin", e.target.value || null)}
+              value={draftFilters.powerMin}
+              onChange={(e) => setDraftFilters((prev) => ({ ...prev, powerMin: e.target.value }))}
             />
             <input
               type="number"
               placeholder={t("powerMaxPlaceholder")}
-              value={currentParams.powerMax || ""}
-              onChange={(e) => updateParam("powerMax", e.target.value || null)}
+              value={draftFilters.powerMax}
+              onChange={(e) => setDraftFilters((prev) => ({ ...prev, powerMax: e.target.value }))}
             />
           </div>
 
@@ -357,40 +491,40 @@ export default function Dashboard({
             <label>
               <input
                 type="checkbox"
-                checked={currentParams.owned === "1"}
-                onChange={() => toggleParam("owned")}
+                checked={draftFilters.owned}
+                onChange={() => setDraftFilters((prev) => ({ ...prev, owned: !prev.owned }))}
               />{" "}
               {t("onlyOwned")}
             </label>
             <label>
               <input
                 type="checkbox"
-                checked={currentParams.duplicates === "1"}
-                onChange={() => toggleParam("duplicates")}
+                checked={draftFilters.duplicates}
+                onChange={() => setDraftFilters((prev) => ({ ...prev, duplicates: !prev.duplicates }))}
               />{" "}
               {t("onlyDuplicates")}
             </label>
             <label>
               <input
                 type="checkbox"
-                checked={currentParams.wantsTrade === "1"}
-                onChange={() => toggleParam("wantsTrade")}
+                checked={draftFilters.wantsTrade}
+                onChange={() => setDraftFilters((prev) => ({ ...prev, wantsTrade: !prev.wantsTrade }))}
               />{" "}
               {t("onlyWantsTrade")}
             </label>
             <label>
               <input
                 type="checkbox"
-                checked={currentParams.inDeck === "1"}
-                onChange={() => toggleParam("inDeck")}
+                checked={draftFilters.inDeck}
+                onChange={() => setDraftFilters((prev) => ({ ...prev, inDeck: !prev.inDeck }))}
               />{" "}
               {t("onlyInDeck")}
             </label>
             <label>
               <input
                 type="checkbox"
-                checked={currentParams.counter === "1"}
-                onChange={() => toggleParam("counter")}
+                checked={draftFilters.counter}
+                onChange={() => setDraftFilters((prev) => ({ ...prev, counter: !prev.counter }))}
               />{" "}
               {t("onlyCounter")}
             </label>
@@ -398,6 +532,12 @@ export default function Dashboard({
               <input type="checkbox" checked={groupBySet} onChange={() => toggleParam("groupBySet")} />{" "}
               {t("groupBySet")}
             </label>
+          </div>
+
+          <div className="filters-apply-row">
+            <button type="button" className="filters-apply-button" onClick={applyDraftFilters}>
+              {t("applyFilters")}
+            </button>
           </div>
         </div>
       )}
@@ -560,6 +700,56 @@ export default function Dashboard({
           flex-wrap: wrap;
           gap: var(--space-2) var(--space-5);
           font-size: var(--font-size-sm);
+        }
+
+        .filters-apply-row {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: var(--space-4);
+        }
+        .filters-apply-button {
+          background: var(--color-accent);
+          border-color: var(--color-accent);
+          color: #fff;
+          font-weight: 600;
+        }
+        .filters-apply-button:hover {
+          background: var(--color-accent-hover);
+          border-color: var(--color-accent-hover);
+        }
+
+        .filter-pills {
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--space-2);
+          margin-top: var(--space-2);
+        }
+        .filter-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 4px 4px 10px;
+          border-radius: var(--radius-full);
+          background: var(--color-accent-subtle);
+          color: var(--color-accent-hover);
+          font-size: var(--font-size-xs);
+          font-weight: 500;
+        }
+        .filter-pill-remove {
+          all: unset;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 18px;
+          height: 18px;
+          min-height: 18px;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 11px;
+          color: var(--color-accent-hover);
+        }
+        .filter-pill-remove:hover {
+          background: rgba(0, 0, 0, 0.08);
         }
 
         .card-grid {

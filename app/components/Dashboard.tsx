@@ -2,7 +2,6 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useTransition, type ChangeEvent } from "react";
-import Image from "next/image";
 import CardImage from "./CardImage";
 
 type ScanCandidate = {
@@ -590,15 +589,12 @@ function CardImageModal({
           ✕
         </button>
         {card.localImagePath ? (
-          <div style={{ position: "relative", width: "100%", aspectRatio: "63 / 88" }}>
-            <Image
-              src={`/api/catalog-image/${card.localImagePath}`}
-              alt={card.cardName}
-              fill
-              sizes="(max-width: 600px) 100vw, 420px"
-              style={{ objectFit: "contain" }}
-            />
-          </div>
+          <CardImage
+            src={`/api/catalog-image/${card.localImagePath}`}
+            alt={card.cardName}
+            objectFit="contain"
+            sizes="(max-width: 600px) 100vw, 420px"
+          />
         ) : (
           <div style={{ aspectRatio: "63 / 88", background: "#eee", borderRadius: 8 }} />
         )}

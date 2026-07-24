@@ -9,7 +9,19 @@ import { useEffect, useRef, useState } from "react";
 // margem e chega a ver o shimmer de loading.
 const PRELOAD_MARGIN = "800px 0px";
 
-export default function CardImage({ src, alt }: { src: string; alt: string }) {
+const DEFAULT_SIZES = "(max-width: 480px) 45vw, (max-width: 900px) 25vw, (max-width: 1400px) 16vw, 150px";
+
+export default function CardImage({
+  src,
+  alt,
+  objectFit = "cover",
+  sizes = DEFAULT_SIZES,
+}: {
+  src: string;
+  alt: string;
+  objectFit?: "cover" | "contain";
+  sizes?: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -49,8 +61,8 @@ export default function CardImage({ src, alt }: { src: string; alt: string }) {
           src={src}
           alt={alt}
           fill
-          sizes="(max-width: 480px) 45vw, (max-width: 900px) 25vw, (max-width: 1400px) 16vw, 150px"
-          style={{ objectFit: "cover", opacity: loaded ? 1 : 0, transition: "opacity 0.2s ease" }}
+          sizes={sizes}
+          style={{ objectFit, opacity: loaded ? 1 : 0, transition: "opacity 0.2s ease" }}
           onLoad={() => setLoaded(true)}
         />
       )}

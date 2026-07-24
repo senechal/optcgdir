@@ -403,18 +403,14 @@ export default function Dashboard({
 
       {groupedEntries.map(([groupName, groupCards]) => (
         <section key={groupName} style={{ marginBottom: 32 }}>
-          {groupBySet && <h2 style={{ borderBottom: "1px solid #ddd", paddingBottom: 4 }}>{groupName}</h2>}
+          {groupBySet && (
+            <h2 style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: 4 }}>{groupName}</h2>
+          )}
 
           {groupCards.length === 0 ? (
-            <p style={{ color: "#888" }}>{t("noCardsFound")}</p>
+            <p style={{ color: "var(--color-text-secondary)" }}>{t("noCardsFound")}</p>
           ) : view === "grid" ? (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-                gap: 14,
-              }}
-            >
+            <div className="card-grid">
               {groupCards.map((card) => (
                 <CardTile
                   key={card.cardImageId}
@@ -425,24 +421,25 @@ export default function Dashboard({
               ))}
             </div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <table className="card-table">
               <thead>
-                <tr style={{ textAlign: "left", borderBottom: "2px solid #ccc" }}>
-                  <th style={{ padding: 6 }}>{t("colName")}</th>
-                  <th style={{ padding: 6 }}>{t("colCode")}</th>
-                  <th style={{ padding: 6 }}>{t("colColor")}</th>
-                  <th style={{ padding: 6 }}>{t("colType")}</th>
-                  <th style={{ padding: 6 }}>{t("colRarity")}</th>
-                  <th style={{ padding: 6 }}>{t("colCost")}</th>
-                  <th style={{ padding: 6 }}>{t("colPower")}</th>
-                  <th style={{ padding: 6 }}>{t("colQty")}</th>
-                  <th style={{ padding: 6 }}>{t("colInDeck")}</th>
-                  <th style={{ padding: 6 }}>{t("colActions")}</th>
+                <tr>
+                  <th className="col-image"></th>
+                  <th className="col-name">{t("colName")}</th>
+                  <th className="col-code">{t("colCode")}</th>
+                  <th className="col-color hide-mobile">{t("colColor")}</th>
+                  <th className="col-type hide-mobile">{t("colType")}</th>
+                  <th className="col-rarity hide-mobile">{t("colRarity")}</th>
+                  <th className="col-cost hide-mobile">{t("colCost")}</th>
+                  <th className="col-power hide-mobile">{t("colPower")}</th>
+                  <th className="col-qty hide-mobile">{t("colQty")}</th>
+                  <th className="col-indeck hide-mobile">{t("colInDeck")}</th>
+                  <th className="col-actions">{t("colActions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {groupCards.map((card) => (
-                  <CardRow key={card.cardImageId} card={card} onMutate={mutateCollection} />
+                  <CardRow key={card.cardImageId} card={card} onMutate={mutateCollection} onEnlarge={setEnlargedCard} />
                 ))}
               </tbody>
             </table>
@@ -537,6 +534,100 @@ export default function Dashboard({
           gap: var(--space-2) var(--space-5);
           font-size: var(--font-size-sm);
         }
+
+        .card-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          gap: var(--space-3);
+        }
+
+      `}</style>
+
+      {/* global: CardRow/CardTile são componentes separados, então um
+          <style jsx> escopado aqui não alcançaria as <tr>/<td> que eles
+          renderizam (o styled-jsx só marca elementos do PRÓPRIO componente
+          que declara o bloco). */}
+      <style jsx global>{`
+        .card-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: var(--font-size-sm);
+        }
+        .card-table thead tr {
+          text-align: left;
+          border-bottom: 2px solid var(--color-border);
+        }
+        .card-table th,
+        .card-table td {
+          padding: var(--space-2);
+        }
+        .card-table tbody tr {
+          border-bottom: 1px solid var(--color-border);
+        }
+        .card-table .col-image {
+          width: 50px;
+        }
+        .card-table .row-thumb {
+          width: 40px;
+          flex-shrink: 0;
+        }
+        .card-table .row-meta {
+          display: none;
+        }
+
+        /* Abaixo de ~700px, a tabela vira uma lista de linhas compactas
+           (miniatura + nome/código + qtd), sem tabela/scroll horizontal —
+           colunas menos essenciais (cor, tipo, raridade, custo, poder, em
+           deck) somem, mas o código continua visível dentro da própria
+           célula do nome via .row-meta. */
+        @media (max-width: 699px) {
+          .card-table thead {
+            display: none;
+          }
+          .card-table,
+          .card-table tbody,
+          .card-table tr {
+            display: block;
+            width: 100%;
+          }
+          .card-table tr.card-row {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-2) 0;
+          }
+          .card-table td {
+            padding: 0;
+          }
+          .card-table td.hide-mobile,
+          .card-table td.col-code {
+            display: none;
+          }
+          .card-table td.col-image {
+            flex: 0 0 auto;
+          }
+          .card-table td.col-name {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+          }
+          .card-table td.col-name a {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .card-table .row-meta {
+            display: block;
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+          }
+          .card-table td.col-actions {
+            display: flex;
+            flex: 0 0 auto;
+            gap: 4px;
+          }
+        }
       `}</style>
     </div>
   );
@@ -554,7 +645,7 @@ function CardTile({
   const t = useTranslations("Dashboard");
 
   return (
-    <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 8, textAlign: "center" }}>
+    <div className="card-tile">
       {card.localImagePath ? (
         <button
           type="button"
@@ -570,12 +661,12 @@ function CardTile({
           <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
         </button>
       ) : (
-        <div style={{ aspectRatio: "63 / 88", background: "#eee", borderRadius: 4 }} />
+        <div style={{ aspectRatio: "63 / 88", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }} />
       )}
-      <div style={{ fontSize: 12, marginTop: 6, fontWeight: 600 }}>{card.cardName}</div>
-      <div style={{ fontSize: 11, color: "#888" }}>{card.cardSetId}</div>
+      <div style={{ fontSize: 12, marginTop: 8, fontWeight: 600 }}>{card.cardName}</div>
+      <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{card.cardSetId}</div>
 
-      <div style={{ fontSize: 11, minHeight: 14, marginTop: 2 }}>
+      <div style={{ fontSize: 11, minHeight: 14, marginTop: 2, color: "var(--color-text-secondary)" }}>
         {card.quantity > 0 && (
           <span>
             {t("quantityLabel", { count: card.quantity })}
@@ -584,10 +675,12 @@ function CardTile({
         )}
       </div>
       {card.allocatedInDecks > 0 && (
-        <div style={{ fontSize: 11, color: "#555" }}>{t("inDeckCount", { count: card.allocatedInDecks })}</div>
+        <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>
+          {t("inDeckCount", { count: card.allocatedInDecks })}
+        </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 6 }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 8 }}>
         <button onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>
           −
         </button>
@@ -606,10 +699,28 @@ function CardTile({
         href={cardmarketUrl(card)}
         target="_blank"
         rel="noreferrer"
-        style={{ fontSize: 11, display: "block", marginTop: 6 }}
+        style={{ fontSize: 11, display: "block", marginTop: 8 }}
       >
         {t("viewOnCardmarket")}
       </a>
+
+      <style jsx>{`
+        .card-tile {
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-md);
+          background: var(--color-surface);
+          box-shadow: var(--shadow-sm);
+          padding: var(--space-2);
+          text-align: center;
+          transition: box-shadow 0.15s ease, transform 0.15s ease;
+        }
+        @media (hover: hover) {
+          .card-tile:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -617,35 +728,62 @@ function CardTile({
 function CardRow({
   card,
   onMutate,
+  onEnlarge,
 }: {
   card: CardWithCollectionInfo;
   onMutate: (id: string, action: string) => void;
+  onEnlarge: (card: CardWithCollectionInfo) => void;
 }) {
   const t = useTranslations("Dashboard");
 
   return (
-    <tr style={{ borderBottom: "1px solid #eee" }}>
-      <td style={{ padding: 6 }}>
+    <tr className="card-row">
+      <td className="col-image">
+        {card.localImagePath ? (
+          <button
+            type="button"
+            onClick={() => onEnlarge(card)}
+            title={t("viewLargerImage")}
+            style={{ all: "unset", display: "block", cursor: "pointer" }}
+          >
+            <div className="row-thumb">
+              <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
+            </div>
+          </button>
+        ) : (
+          <div className="row-thumb" style={{ background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }} />
+        )}
+      </td>
+      <td className="col-name">
         <a href={cardmarketUrl(card)} target="_blank" rel="noreferrer">
           {card.cardName}
         </a>
+        <span className="row-meta">
+          {card.cardSetId}
+          {card.quantity > 0 && ` · ${t("quantityLabel", { count: card.quantity })}`}
+        </span>
       </td>
-      <td style={{ padding: 6 }}>{card.cardSetId}</td>
-      <td style={{ padding: 6 }}>{card.cardColor}</td>
-      <td style={{ padding: 6 }}>{card.cardType}</td>
-      <td style={{ padding: 6 }}>{card.rarity}</td>
-      <td style={{ padding: 6 }}>{card.cardCost ?? "-"}</td>
-      <td style={{ padding: 6 }}>{card.cardPower ?? "-"}</td>
-      <td style={{ padding: 6 }}>
+      <td className="col-code">{card.cardSetId}</td>
+      <td className="col-color hide-mobile">{card.cardColor}</td>
+      <td className="col-type hide-mobile">{card.cardType}</td>
+      <td className="col-rarity hide-mobile">{card.rarity}</td>
+      <td className="col-cost hide-mobile">{card.cardCost ?? "-"}</td>
+      <td className="col-power hide-mobile">{card.cardPower ?? "-"}</td>
+      <td className="col-qty hide-mobile">
         {card.quantity}
         {card.quantity > 1 ? t("duplicateSuffixShort") : ""}
       </td>
-      <td style={{ padding: 6 }}>{card.allocatedInDecks > 0 ? card.allocatedInDecks : "-"}</td>
-      <td style={{ padding: 6, whiteSpace: "nowrap" }}>
-        <button onClick={() => onMutate(card.cardImageId, "decrement")}>−</button>{" "}
-        <button onClick={() => onMutate(card.cardImageId, "increment")}>+</button>{" "}
+      <td className="col-indeck hide-mobile">{card.allocatedInDecks > 0 ? card.allocatedInDecks : "-"}</td>
+      <td className="col-actions">
+        <button onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>
+          −
+        </button>
+        <button onClick={() => onMutate(card.cardImageId, "increment")} title={t("addOne")}>
+          +
+        </button>
         <button
           onClick={() => onMutate(card.cardImageId, "toggleWantsTrade")}
+          title={t("wantsTrade")}
           style={{ opacity: card.wantsTrade ? 1 : 0.35 }}
         >
           🔁

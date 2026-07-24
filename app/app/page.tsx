@@ -106,7 +106,22 @@ export default async function Home({
     set: (a, b) => a.setId.localeCompare(b.setId),
     dateAdded: (a, b) => a.cardImageId.localeCompare(b.cardImageId), // fallback estável
   };
-  cards.sort(sorters[sort] || sorters.name);
+  const activeSorter = sorters[sort] || sorters.name;
+
+  // Com termo de busca, cartas que batem pelo código (o que fica no canto
+  // inferior direito da carta) vêm antes das que só batem pelo nome/texto —
+  // é o sinal mais forte de que é exatamente a carta procurada.
+  if (search) {
+    const term = search.toLowerCase();
+    const matchRank = (c: CardWithCollectionInfo) => {
+      if (c.cardSetId.toLowerCase().includes(term) || c.cardImageId.toLowerCase().includes(term)) return 0;
+      if (c.cardName.toLowerCase().includes(term)) return 1;
+      return 2;
+    };
+    cards.sort((a, b) => matchRank(a) - matchRank(b) || activeSorter(a, b));
+  } else {
+    cards.sort(activeSorter);
+  }
 
   const filterOptions = {
     sets: sets.map((s: any) => ({ id: s.id, name: s.name })),

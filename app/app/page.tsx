@@ -33,7 +33,7 @@ export default async function Home({
   const costMax = first(searchParams.costMax);
   const powerMin = first(searchParams.powerMin);
   const powerMax = first(searchParams.powerMax);
-  const sort = first(searchParams.sort) || "name";
+  const sort = first(searchParams.sort) || "code";
   const view = (first(searchParams.view) as "grid" | "list") || "grid";
   const groupBySet = first(searchParams.groupBySet) === "1";
 
@@ -99,6 +99,7 @@ export default async function Home({
   if (powerMax) cards = cards.filter((c) => c.cardPower !== null && Number(c.cardPower) <= Number(powerMax));
 
   const sorters: Record<string, (a: CardWithCollectionInfo, b: CardWithCollectionInfo) => number> = {
+    code: (a, b) => a.cardSetId.localeCompare(b.cardSetId, undefined, { numeric: true }),
     name: (a, b) => a.cardName.localeCompare(b.cardName),
     cost: (a, b) => (Number(a.cardCost) || 0) - (Number(b.cardCost) || 0),
     power: (a, b) => (Number(a.cardPower) || 0) - (Number(b.cardPower) || 0),
@@ -106,7 +107,7 @@ export default async function Home({
     set: (a, b) => a.setId.localeCompare(b.setId),
     dateAdded: (a, b) => a.cardImageId.localeCompare(b.cardImageId), // fallback estável
   };
-  const activeSorter = sorters[sort] || sorters.name;
+  const activeSorter = sorters[sort] || sorters.code;
 
   // Com termo de busca, cartas que batem pelo código (o que fica no canto
   // inferior direito da carta) vêm antes das que só batem pelo nome/texto —

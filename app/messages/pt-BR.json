@@ -16,7 +16,6 @@
   },
   "Dashboard": {
     "title": "OPTCG Collection Manager",
-    "scanAndAddLink": "📷 Escanear e adicionar à coleção",
     "cardsFound": "{count, plural, one {# carta encontrada} other {# cartas encontradas}}",
     "updating": "— atualizando...",
     "searchPlaceholder": "Buscar por nome, código (ex: OP01-001) ou texto do efeito...",
@@ -73,20 +72,6 @@
     "addOne": "Adicionar 1",
     "wantsTrade": "Quero trocar",
     "viewOnCardmarket": "Ver no Cardmarket ↗"
-  },
-  "Scan": {
-    "title": "📷 Escanear carta",
-    "instructions": "Tire uma foto da carta — tente deixar ela bem enquadrada e iluminada.",
-    "photoAlt": "Foto da carta",
-    "processing": "Processando foto...",
-    "confirmed": "\"{name}\" adicionada à coleção! Pode escanear a próxima.",
-    "noMatch": "Nenhum match confiável encontrado.",
-    "searchManuallyLink": "Buscar manualmente no catálogo →",
-    "notRightCard": "Não é a carta certa? ",
-    "searchManually": "buscar manualmente",
-    "confirm": "Confirmar",
-    "errorGeneric": "Falha ao processar a foto",
-    "errorUpload": "Falha ao enviar a foto"
   },
   "ScanApi": {
     "noPhotoSent": "Nenhuma foto enviada",

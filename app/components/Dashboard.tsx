@@ -708,13 +708,14 @@ function CardTile({
       )}
 
       <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 8 }}>
-        <button onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>
+        <button className="icon-btn" onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>
           −
         </button>
-        <button onClick={() => onMutate(card.cardImageId, "increment")} title={t("addOne")}>
+        <button className="icon-btn" onClick={() => onMutate(card.cardImageId, "increment")} title={t("addOne")}>
           +
         </button>
         <button
+          className="icon-btn"
           onClick={() => onMutate(card.cardImageId, "toggleWantsTrade")}
           title={t("wantsTrade")}
           style={{ opacity: card.wantsTrade ? 1 : 0.35 }}
@@ -802,13 +803,14 @@ function CardRow({
       </td>
       <td className="col-indeck hide-mobile">{card.allocatedInDecks > 0 ? card.allocatedInDecks : "-"}</td>
       <td className="col-actions">
-        <button onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>
+        <button className="icon-btn" onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>
           −
         </button>
-        <button onClick={() => onMutate(card.cardImageId, "increment")} title={t("addOne")}>
+        <button className="icon-btn" onClick={() => onMutate(card.cardImageId, "increment")} title={t("addOne")}>
           +
         </button>
         <button
+          className="icon-btn"
           onClick={() => onMutate(card.cardImageId, "toggleWantsTrade")}
           title={t("wantsTrade")}
           style={{ opacity: card.wantsTrade ? 1 : 0.35 }}
@@ -850,6 +852,7 @@ function CardImageModal({
       <div className="card-modal-panel" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
+          className="icon-btn"
           onClick={onClose}
           aria-label={tCommon("close")}
           style={{
@@ -860,11 +863,6 @@ function CardImageModal({
             border: "none",
             background: "rgba(0,0,0,0.06)",
             borderRadius: "50%",
-            width: 28,
-            height: 28,
-            fontSize: 16,
-            lineHeight: 1,
-            cursor: "pointer",
           }}
         >
           ✕

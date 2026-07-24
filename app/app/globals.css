@@ -119,6 +119,20 @@ button:disabled {
   cursor: default;
 }
 
+/* Botão só-ícone (−, +, 🔁, ✕...): o padding padrão de button (pensado pra
+   texto como "Buscar") deixa esses botões esticados e sem "respiro" quando
+   ficam vários lado a lado numa fileira estreita (ex: ações do card). */
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 select,
 input[type="text"],
 input[type="number"],

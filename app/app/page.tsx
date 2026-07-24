@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { getDefaultUserId } from "../lib/currentUser";
 import Dashboard, { type CardWithCollectionInfo } from "../components/Dashboard";
+import packageJson from "../package.json";
 
 // Consulta o banco em tempo real — não pode ser pré-renderizada no build
 // (não há Postgres disponível durante a construção da imagem).
@@ -144,6 +145,7 @@ export default async function Home({
       currentParams={currentParamsRecord}
       view={view}
       groupBySet={groupBySet}
+      version={packageJson.version}
     />
   );
 }

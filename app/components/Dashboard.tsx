@@ -50,12 +50,14 @@ export default function Dashboard({
   currentParams,
   view,
   groupBySet,
+  version,
 }: {
   cards: CardWithCollectionInfo[];
   filterOptions: FilterOptions;
   currentParams: Record<string, string>;
   view: "grid" | "list";
   groupBySet: boolean;
+  version: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -139,7 +141,10 @@ export default function Dashboard({
   return (
     <div style={{ fontFamily: "sans-serif", padding: 24, maxWidth: 1400, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h1 style={{ marginBottom: 4 }}>OPTCG Collection Manager</h1>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <h1 style={{ marginBottom: 4 }}>OPTCG Collection Manager</h1>
+          <span style={{ fontSize: 12, color: "#999" }}>v{version}</span>
+        </div>
         <a href="/scan" style={{ fontSize: 13, whiteSpace: "nowrap" }}>
           📷 Escanear e adicionar à coleção
         </a>

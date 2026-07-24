@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # precisa do histórico completo pra contar commits (versão automática)
 
       - name: Login no GitHub Container Registry
         uses: docker/login-action@v4
@@ -36,12 +38,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Versão exibida na tela do app: major.minor de app/package.json (só
+      # esses dois dá pra ajustar manualmente, pra marcar algo maior) + nº
+      # de commits em main como patch automático — muda sozinho a cada
+      # merge, sem precisar lembrar de subir version em cada PR.
+      - name: Calcula versão da app
+        id: appver
+        run: |
+          BASE=$(jq -r '.version' app/package.json | cut -d. -f1,2)
+          BUILD=$(git rev-list --count HEAD)
+          echo "value=${BASE}.${BUILD}" >> "$GITHUB_OUTPUT"
+
       - name: Build e push da imagem
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
+          build-args: |
+            ${{ matrix.image_name == 'optcgdir-app' && format('APP_VERSION={0}', steps.appver.outputs.value) || '' }}
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image_name }}:latest
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image_name }}:${{ github.sha }}

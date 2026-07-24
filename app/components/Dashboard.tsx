@@ -190,88 +190,89 @@ export default function Dashboard({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <h1 style={{ marginBottom: 4 }}>{t("title")}</h1>
-          <span style={{ fontSize: 12, color: "#999" }}>v{version}</span>
+          <span style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>v{version}</span>
         </div>
         <LocaleSwitcher current={locale} />
       </div>
-      <p style={{ color: "#888", marginTop: 0, marginBottom: 20 }}>
+      <p style={{ color: "var(--color-text-secondary)", marginTop: 0, marginBottom: 20 }}>
         {t("cardsFound", { count: cards.length })} {isPending && t("updating")}
       </p>
 
-      <form
-        className="search-row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          updateParam("search", searchInput || null);
-        }}
-      >
-        <input
-          className="search-input"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder={t("searchPlaceholder")}
-        />
-        <button type="submit">{t("searchButton")}</button>
-        {currentParams.search && (
-          <button
-            type="button"
-            onClick={() => {
-              setSearchInput("");
-              updateParam("search", null);
-            }}
-          >
-            {t("clearSearch")}
-          </button>
-        )}
-        <label
-          className="scan-label"
-          style={{
-            cursor: scanning ? "default" : "pointer",
-            opacity: scanning ? 0.6 : 1,
+      <div className="sticky-controls">
+        <form
+          className="search-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            updateParam("search", searchInput || null);
           }}
         >
-          📷 {scanning ? t("scanToSearchIdentifying") : t("scanToSearchLabel")}
           <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleScanFile}
-            disabled={scanning}
-            style={{ display: "none" }}
+            className="search-input"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t("searchPlaceholder")}
           />
-        </label>
-      </form>
-      {scanNotice && <p style={{ fontSize: 13, color: "var(--color-success)", marginTop: 4, marginBottom: 16 }}>{scanNotice}</p>}
-      {scanError && <p style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 4, marginBottom: 16 }}>{scanError}</p>}
-      {!scanNotice && !scanError && <div style={{ marginBottom: 16 }} />}
+          <button type="submit">{t("searchButton")}</button>
+          {currentParams.search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchInput("");
+                updateParam("search", null);
+              }}
+            >
+              {t("clearSearch")}
+            </button>
+          )}
+          <label
+            className="scan-label"
+            style={{
+              cursor: scanning ? "default" : "pointer",
+              opacity: scanning ? 0.6 : 1,
+            }}
+          >
+            📷 {scanning ? t("scanToSearchIdentifying") : t("scanToSearchLabel")}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleScanFile}
+              disabled={scanning}
+              style={{ display: "none" }}
+            />
+          </label>
+        </form>
+        {scanNotice && <p style={{ fontSize: 13, color: "var(--color-success)", marginTop: 4, marginBottom: 0 }}>{scanNotice}</p>}
+        {scanError && <p style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 4, marginBottom: 0 }}>{scanError}</p>}
 
-      <div className="toolbar-row">
-        <select
-          value={currentParams.sort || "code"}
-          onChange={(e) => updateParam("sort", e.target.value)}
-        >
-          <option value="code">{t("sortCode")}</option>
-          <option value="name">{t("sortName")}</option>
-          <option value="cost">{t("sortCost")}</option>
-          <option value="power">{t("sortPower")}</option>
-          <option value="rarity">{t("sortRarity")}</option>
-          <option value="set">{t("sortSet")}</option>
-          <option value="dateAdded">{t("sortDateAdded")}</option>
-        </select>
+        <div className="toolbar-row">
+          <select
+            value={currentParams.sort || "code"}
+            onChange={(e) => updateParam("sort", e.target.value)}
+          >
+            <option value="code">{t("sortCode")}</option>
+            <option value="name">{t("sortName")}</option>
+            <option value="cost">{t("sortCost")}</option>
+            <option value="power">{t("sortPower")}</option>
+            <option value="rarity">{t("sortRarity")}</option>
+            <option value="set">{t("sortSet")}</option>
+            <option value="dateAdded">{t("sortDateAdded")}</option>
+          </select>
 
-        <button type="button" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen}>
-          {t("filtersToggle")}
-          {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
-          {filtersOpen ? " ▲" : " ▼"}
-        </button>
-
-        <div className="view-toggle">
-          <button onClick={() => updateParam("view", "grid")} disabled={view === "grid"}>
-            {t("viewGrid")}
+          <button type="button" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen}>
+            {t("filtersToggle")}
+            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+            {filtersOpen ? " ▲" : " ▼"}
           </button>
-          <button onClick={() => updateParam("view", "list")} disabled={view === "list"}>
-            {t("viewList")}
-          </button>
+
+          <div className="view-toggle">
+            <button onClick={() => updateParam("view", "grid")} disabled={view === "grid"}>
+              {t("viewGrid")}
+            </button>
+            <button onClick={() => updateParam("view", "list")} disabled={view === "list"}>
+              {t("viewList")}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -408,7 +409,17 @@ export default function Dashboard({
           )}
 
           {groupCards.length === 0 ? (
-            <p style={{ color: "var(--color-text-secondary)" }}>{t("noCardsFound")}</p>
+            <p
+              style={{
+                color: "var(--color-text-secondary)",
+                textAlign: "center",
+                padding: "var(--space-8) var(--space-4)",
+                border: "1px dashed var(--color-border-strong)",
+                borderRadius: "var(--radius-lg)",
+              }}
+            >
+              {t("noCardsFound")}
+            </p>
           ) : view === "grid" ? (
             <div className="card-grid">
               {groupCards.map((card) => (
@@ -459,6 +470,22 @@ export default function Dashboard({
         @media (min-width: 900px) {
           .dashboard-container {
             padding: var(--space-6) var(--space-8);
+          }
+        }
+
+        .sticky-controls {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          margin: 0 calc(var(--space-4) * -1) var(--space-4);
+          padding: var(--space-2) var(--space-4) var(--space-3);
+          background: var(--color-bg-subtle);
+          border-bottom: 1px solid var(--color-border);
+        }
+        @media (min-width: 900px) {
+          .sticky-controls {
+            margin: 0 calc(var(--space-8) * -1) var(--space-4);
+            padding: var(--space-2) var(--space-8) var(--space-3);
           }
         }
 
@@ -850,10 +877,10 @@ function CardImageModal({
             sizes="(max-width: 600px) 100vw, 420px"
           />
         ) : (
-          <div style={{ aspectRatio: "63 / 88", background: "#eee", borderRadius: 8 }} />
+          <div style={{ aspectRatio: "63 / 88", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }} />
         )}
         <div style={{ marginTop: 10, fontWeight: 600 }}>{card.cardName}</div>
-        <div style={{ fontSize: 12, color: "#888" }}>{card.cardSetId}</div>
+        <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{card.cardSetId}</div>
       </div>
 
       <style jsx>{`
@@ -869,9 +896,10 @@ function CardImageModal({
         }
         .card-modal-panel {
           position: relative;
-          background: #fff;
-          border-radius: 12px;
-          padding: 16px;
+          background: var(--color-surface);
+          border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-lg);
+          padding: var(--space-4);
           width: 100%;
           max-width: 420px;
           max-height: 90vh;
@@ -886,7 +914,7 @@ function CardImageModal({
           .card-modal-panel {
             max-width: 100%;
             max-height: 85vh;
-            border-radius: 16px 16px 0 0;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
           }
         }
       `}</style>

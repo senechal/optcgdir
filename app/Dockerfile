@@ -21,6 +21,12 @@ WORKDIR /app
 # Prisma Client roda em tempo de execução aqui e também precisa do OpenSSL
 RUN apk add --no-cache openssl
 ENV NODE_ENV=production
+# Preenchido pelo workflow de build (major.minor de app/package.json + nº
+# de commits em main como patch automático) — não precisa bump manual a
+# cada PR. Sem valor default sensato fora do CI, então fica vazio; a app
+# cai pro version do package.json nesse caso (ver app/app/page.tsx).
+ARG APP_VERSION=""
+ENV APP_VERSION=$APP_VERSION
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next

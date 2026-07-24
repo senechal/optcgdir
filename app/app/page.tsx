@@ -7,6 +7,12 @@ import packageJson from "../package.json";
 // (não há Postgres disponível durante a construção da imagem).
 export const dynamic = "force-dynamic";
 
+// Em produção, o workflow de build injeta major.minor de package.json +
+// nº de commits em main como patch automático (ex: "1.1.47") — sem bump
+// manual a cada PR. Em dev local (sem essa env var) cai pro version cru
+// do package.json.
+const appVersion = process.env.APP_VERSION || packageJson.version;
+
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 function first(v: string | string[] | undefined): string | undefined {
@@ -145,7 +151,7 @@ export default async function Home({
       currentParams={currentParamsRecord}
       view={view}
       groupBySet={groupBySet}
-      version={packageJson.version}
+      version={appVersion}
     />
   );
 }

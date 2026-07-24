@@ -13,6 +13,21 @@ export const dynamic = "force-dynamic";
 // do package.json.
 const appVersion = process.env.APP_VERSION || packageJson.version;
 
+// As 6 cores do jogo — cartas multicolor guardam o campo card_color como
+// os nomes em inglês separados por espaço (ex: "Blue Red"), então o filtro
+// por uma cor (contains, abaixo) já bate em qualquer carta que tenha essa
+// cor entre as suas. Fixo em vez de vir do banco: listar os valores
+// distintos de card_color traria cada combinação como uma opção separada
+// (ex: "Blue Red", "Black Yellow"), não só as 6 cores base.
+const COLORS = [
+  { value: "Red", label: "Vermelho" },
+  { value: "Green", label: "Verde" },
+  { value: "Blue", label: "Azul" },
+  { value: "Purple", label: "Roxo" },
+  { value: "Black", label: "Preto" },
+  { value: "Yellow", label: "Amarelo" },
+];
+
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 function first(v: string | string[] | undefined): string | undefined {
@@ -60,7 +75,7 @@ export default async function Home({
     ];
   }
 
-  const [rawCards, sets, colorRows, rarityRows, typeRows] = await Promise.all([
+  const [rawCards, sets, rarityRows, typeRows] = await Promise.all([
     prisma.card.findMany({
       where,
       include: {
@@ -69,7 +84,6 @@ export default async function Home({
       },
     }),
     prisma.set.findMany({ orderBy: { id: "asc" } }),
-    prisma.card.findMany({ distinct: ["cardColor"], select: { cardColor: true } }),
     prisma.card.findMany({ distinct: ["rarity"], select: { rarity: true } }),
     prisma.card.findMany({ distinct: ["cardType"], select: { cardType: true } }),
   ]);
@@ -133,7 +147,7 @@ export default async function Home({
 
   const filterOptions = {
     sets: sets.map((s: any) => ({ id: s.id, name: s.name })),
-    colors: colorRows.map((c: any) => c.cardColor).filter((v: string | null): v is string => Boolean(v)),
+    colors: COLORS,
     rarities: rarityRows.map((r: any) => r.rarity).filter((v: string | null): v is string => Boolean(v)),
     types: typeRows.map((t: any) => t.cardType).filter((v: string | null): v is string => Boolean(v)),
   };

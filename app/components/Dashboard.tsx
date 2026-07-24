@@ -32,7 +32,7 @@ export type CardWithCollectionInfo = {
 
 type FilterOptions = {
   sets: { id: string; name: string }[];
-  colors: string[];
+  colors: { value: string; label: string }[];
   rarities: string[];
   types: string[];
 };
@@ -234,8 +234,8 @@ export default function Dashboard({
         >
           <option value="">Cor: todas</option>
           {filterOptions.colors.map((c) => (
-            <option key={c} value={c}>
-              {c}
+            <option key={c.value} value={c.value}>
+              {c.label}
             </option>
           ))}
         </select>

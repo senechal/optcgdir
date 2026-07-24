@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ChangeEvent } from "react";
 import CardImage from "./CardImage";
+
+type ScanCandidate = { cardImageId: string; cardSetId: string; cardName: string };
 
 export type CardWithCollectionInfo = {
   cardImageId: string;
@@ -59,6 +61,9 @@ export default function Dashboard({
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [searchInput, setSearchInput] = useState(currentParams.search || "");
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
 
   function updateParam(key: string, value: string | null) {
     const next: Record<string, string> = { ...currentParams };
@@ -75,6 +80,42 @@ export default function Dashboard({
 
   function toggleParam(key: string) {
     updateParam(key, currentParams[key] === "1" ? null : "1");
+  }
+
+  async function handleScanFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permite escanear a mesma foto de novo em seguida
+
+    if (!file) return;
+
+    setScanError(null);
+    setScanNotice(null);
+    setScanning(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch("/api/scan", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setScanError(data.error || "Falha ao processar a foto");
+        return;
+      }
+
+      const candidates: ScanCandidate[] = data.candidates ?? [];
+      const top = candidates[0];
+      if (!top) {
+        setScanError("Não foi possível identificar a carta. Tente buscar manualmente.");
+        return;
+      }
+
+      setSearchInput(top.cardSetId);
+      updateParam("search", top.cardSetId);
+      setScanNotice(`Carta identificada: ${top.cardName} (${top.cardSetId}) — não é essa? ajuste a busca acima.`);
+    } catch {
+      setScanError("Falha ao enviar a foto");
+    } finally {
+      setScanning(false);
+    }
   }
 
   async function mutateCollection(cardImageId: string, action: string) {
@@ -100,7 +141,7 @@ export default function Dashboard({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <h1 style={{ marginBottom: 4 }}>OPTCG Collection Manager</h1>
         <a href="/scan" style={{ fontSize: 13, whiteSpace: "nowrap" }}>
-          📷 Escanear carta
+          📷 Escanear e adicionar à coleção
         </a>
       </div>
       <p style={{ color: "#888", marginTop: 0, marginBottom: 20 }}>
@@ -112,7 +153,7 @@ export default function Dashboard({
           e.preventDefault();
           updateParam("search", searchInput || null);
         }}
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 4 }}
       >
         <input
           value={searchInput}
@@ -133,7 +174,32 @@ export default function Dashboard({
             Limpar busca
           </button>
         )}
+        <label
+          style={{
+            display: "inline-block",
+            padding: "7px 12px",
+            marginLeft: 8,
+            border: "1px solid #ccc",
+            borderRadius: 4,
+            cursor: scanning ? "default" : "pointer",
+            fontSize: 14,
+            opacity: scanning ? 0.6 : 1,
+          }}
+        >
+          📷 {scanning ? "Identificando..." : "Escanear pra buscar"}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleScanFile}
+            disabled={scanning}
+            style={{ display: "none" }}
+          />
+        </label>
       </form>
+      {scanNotice && <p style={{ fontSize: 13, color: "#080", marginTop: 4, marginBottom: 16 }}>{scanNotice}</p>}
+      {scanError && <p style={{ fontSize: 13, color: "#c00", marginTop: 4, marginBottom: 16 }}>{scanError}</p>}
+      {!scanNotice && !scanError && <div style={{ marginBottom: 16 }} />}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <select

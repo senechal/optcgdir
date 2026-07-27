@@ -109,7 +109,12 @@ export function rankCardsByOcrText(
     const codeBonus = matchedByCode ? codeSimilarity * 100 : 0;
     const tokenRatio = tokenOverlapRatio(normalizedName, ocrBlob);
     const lineSim = bestLineSimilarity(normalizedName, ocrLines);
-    const score = codeBonus + tokenRatio * 40 + lineSim * 30;
+    // Testado contra 28 fotos reais categorizadas: bestLineSimilarity (nome
+    // inteiro vs. uma linha do OCR) prevê a carta certa com bem mais
+    // confiabilidade que tokenOverlapRatio (que reage a qualquer palavra
+    // solta reconhecida em qualquer lugar do blob, inclusive em cartas
+    // erradas) — por isso o peso da linha subiu bem acima do de token.
+    const score = codeBonus + tokenRatio * 15 + lineSim * 60;
     return { ...card, score, matchedByCode };
   });
 

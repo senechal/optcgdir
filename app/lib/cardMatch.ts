@@ -55,9 +55,14 @@ function levenshtein(a: string, b: string): number {
 }
 
 function similarity(a: string, b: string): number {
+  // Guarda contra divisão por zero (maxLen=0) se algum dia essa função for
+  // chamada com as duas strings vazias — não ocorre pelos dois chamadores
+  // atuais (bestLineSimilarity pula linha vazia antes de chegar aqui, e
+  // bestCodeSimilarity só itera sobre candidatos que o regex já garante
+  // não-vazios), por isso o branch abaixo é inatingível pelos testes.
+  /* v8 ignore next */
   if (!a.length && !b.length) return 1;
   const maxLen = Math.max(a.length, b.length);
-  if (maxLen === 0) return 1;
   return 1 - levenshtein(a, b) / maxLen;
 }
 

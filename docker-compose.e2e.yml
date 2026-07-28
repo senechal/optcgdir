@@ -1,0 +1,59 @@
+# Override usado só pelos testes E2E (Playwright, ver e2e/). Diferenças
+# em relação à stack de produção (docker-compose.yml):
+#   - builda as imagens a partir do código do PR em vez de puxar
+#     `:latest` do GHCR — senão o E2E testaria a versão publicada, não a
+#     mudança sendo revisada.
+#   - `init` roda e2e/seed.mjs (alguns cards fixos, determinístico) em vez
+#     do sync real contra optcgapi.com — o sync real baixa milhares de
+#     cartas + imagens (minutos, e depende de um serviço externo no ar),
+#     inviável rodar em todo PR.
+#   - volumes nomeados (sem bind mount em caminho de host) — cada run de
+#     CI começa do zero.
+#   - container_name próprios (a stack de dev local usa os nomes fixos do
+#     compose base, optcg-app/optcg-db/optcg-ocr-service) e portas do host
+#     configuráveis via APP_HOST_PORT/DB_HOST_PORT (ver .env.e2e) — sem
+#     isso, subir a stack de E2E derrubaria os containers de dev já rodando.
+#   - `catalog-sync-scheduler` não é alvo do `up` (ver comando no
+#     playwright.config.ts): não tem profile de gate no compose base e
+#     tentaria sincronizar com a API externa de verdade.
+services:
+  db:
+    container_name: optcg-e2e-db
+    volumes:
+      - db-data-e2e:/var/lib/postgresql/data
+
+  init:
+    container_name: optcg-e2e-init
+    build:
+      context: .
+      dockerfile: e2e/seed.Dockerfile
+    image: optcgdir-e2e-seed
+    command: []
+    volumes:
+      - catalog-images-e2e:/data/catalog-images
+
+  app:
+    container_name: optcg-e2e-app
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    image: optcgdir-app-e2e
+    environment:
+      NEXTAUTH_URL: http://localhost:3010
+    volumes:
+      - catalog-images-e2e:/data/catalog-images:ro
+      - scan-temp-e2e:/data/scan-temp
+
+  ocr-service:
+    container_name: optcg-e2e-ocr-service
+    build:
+      context: .
+      dockerfile: ocr-service/Dockerfile
+    image: optcgdir-ocr-service-e2e
+    volumes:
+      - scan-temp-e2e:/data/scan-temp:ro
+
+volumes:
+  db-data-e2e:
+  catalog-images-e2e:
+  scan-temp-e2e:

@@ -56,15 +56,18 @@ test("adding a card to the collection surfaces it under 'Minha Coleção'", asyn
   await expect(page.getByText(LUFFY)).not.toBeVisible();
 });
 
-test("scanning a real card photo drives the search via the OCR pipeline", async ({ page }) => {
+test("scanning a real card photo surfaces candidates to pick from via the OCR pipeline", async ({ page }) => {
   const fileInput = page.locator('input[type="file"]');
   await fileInput.setInputFiles("fixtures/scan-luffy.jpg");
 
   // O OCR real não lê o código impresso com confiança (ver
-  // memory/ocr_code_recognition_limitation.md) — o fallback por nome é o
-  // caminho esperado aqui, então o aviso e o resultado devem refletir isso.
+  // memory/ocr_code_recognition_limitation.md), e mesmo o nome erra o
+  // candidato #1 boa parte das fotos — por isso o scan mostra os melhores
+  // palpites pro usuário escolher em vez de aplicar o #1 cegamente na busca.
   await expect(page.getByText(/Identificando/)).toBeVisible();
   await expect(page.getByText(/Identificando/)).toBeHidden({ timeout: 20_000 });
-  // .card-tile (não o texto do aviso, que também menciona o nome buscado)
+  await expect(page.getByText("Selecione a carta correta:")).toBeVisible();
+
+  await page.getByRole("button", { name: new RegExp(LUFFY) }).first().click();
   await expect(page.locator(".card-tile", { hasText: LUFFY })).toBeVisible();
 });

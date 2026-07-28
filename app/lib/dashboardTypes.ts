@@ -44,4 +44,5 @@ export type ScanCandidate = {
   cardSetId: string;
   cardName: string;
   matchedByCode: boolean;
+  localImagePath: string | null;
 };

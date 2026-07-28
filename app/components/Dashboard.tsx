@@ -1,21 +1,18 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState, useTransition, type ChangeEvent } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import LocaleSwitcher from "./LocaleSwitcher";
+import TabsBar from "./TabsBar";
+import FilterPills from "./FilterPills";
+import FiltersPanel from "./FiltersPanel";
+import ScanButton from "./ScanButton";
 import CardTile from "./CardTile";
 import CardRow from "./CardRow";
 import CardImageModal from "./CardImageModal";
-import { stripVariantSuffix } from "../lib/cardDisplay";
 import type { Locale } from "../i18n/request";
-import type {
-  CardWithCollectionInfo,
-  FilterOptions,
-  DraftFilters,
-  Tab,
-  ScanCandidate,
-} from "../lib/dashboardTypes";
+import type { CardWithCollectionInfo, FilterOptions, DraftFilters, Tab } from "../lib/dashboardTypes";
 
 export default function Dashboard({
   cards,
@@ -42,7 +39,6 @@ export default function Dashboard({
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [searchInput, setSearchInput] = useState(currentParams.search || "");
-  const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
   const [enlargedCard, setEnlargedCard] = useState<CardWithCollectionInfo | null>(null);
@@ -139,76 +135,9 @@ export default function Dashboard({
     setFiltersOpen(false);
   }
 
-  // Pills dos filtros REALMENTE aplicados (vêm da URL, não do rascunho) —
-  // cada um removível na hora, sem precisar abrir o painel nem clicar em
-  // "Aplicar".
-  const filterPills: { key: string; text: string }[] = [];
-  if (currentParams.color) {
-    const label = filterOptions.colors.find((c) => c.value === currentParams.color)?.label ?? currentParams.color;
-    filterPills.push({ key: "color", text: `${t("colColor")}: ${label}` });
-  }
-  if (currentParams.rarity) {
-    filterPills.push({ key: "rarity", text: `${t("colRarity")}: ${currentParams.rarity}` });
-  }
-  if (currentParams.type) {
-    filterPills.push({ key: "type", text: `${t("colType")}: ${currentParams.type}` });
-  }
-  if (currentParams.set) {
-    const label = filterOptions.sets.find((s) => s.id === currentParams.set)?.name ?? currentParams.set;
-    filterPills.push({ key: "set", text: `${t("colSet")}: ${label}` });
-  }
-  if (currentParams.costMin) filterPills.push({ key: "costMin", text: `${t("colCost")} ≥ ${currentParams.costMin}` });
-  if (currentParams.costMax) filterPills.push({ key: "costMax", text: `${t("colCost")} ≤ ${currentParams.costMax}` });
-  if (currentParams.powerMin) filterPills.push({ key: "powerMin", text: `${t("colPower")} ≥ ${currentParams.powerMin}` });
-  if (currentParams.powerMax) filterPills.push({ key: "powerMax", text: `${t("colPower")} ≤ ${currentParams.powerMax}` });
-  if (currentParams.inDeck === "1") filterPills.push({ key: "inDeck", text: t("onlyInDeck") });
-  if (currentParams.counter === "1") filterPills.push({ key: "counter", text: t("onlyCounter") });
-
-  async function handleScanFile(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // permite escanear a mesma foto de novo em seguida
-
-    if (!file) return;
-
-    setScanError(null);
-    setScanNotice(null);
-    setScanning(true);
-    try {
-      const formData = new FormData();
-      formData.append("photo", file);
-      const res = await fetch("/api/scan", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) {
-        setScanError(data.error || t("scanErrorGeneric"));
-        return;
-      }
-
-      const candidates: ScanCandidate[] = data.candidates ?? [];
-      const top = candidates[0];
-      if (!top) {
-        setScanError(t("scanErrorNoCandidates"));
-        return;
-      }
-
-      // Código impresso é o sinal mais confiável (busca 1 carta específica);
-      // se o OCR não achou um código com confiança, cai pro nome — mais
-      // abrangente, mas evita filtrar pela carta errada por causa de um
-      // código mal lido.
-      if (top.matchedByCode) {
-        setSearchInput(top.cardSetId);
-        updateParam("search", top.cardSetId);
-        setScanNotice(t("scanNoticeByCode", { name: top.cardName, code: top.cardSetId }));
-      } else {
-        const searchTerm = stripVariantSuffix(top.cardName);
-        setSearchInput(searchTerm);
-        updateParam("search", searchTerm);
-        setScanNotice(t("scanNoticeByName", { term: searchTerm }));
-      }
-    } catch {
-      setScanError(t("scanErrorUpload"));
-    } finally {
-      setScanning(false);
-    }
+  function handleScanResult(term: string) {
+    setSearchInput(term);
+    updateParam("search", term);
   }
 
   async function mutateCollection(cardImageId: string, action: string) {
@@ -243,20 +172,7 @@ export default function Dashboard({
       </p>
 
       <div className="sticky-controls">
-        <div className="tabs-row" role="tablist">
-          {(["all", "grouped", "owned", "duplicates", "wantsTrade"] as Tab[]).map((tabValue) => (
-            <button
-              key={tabValue}
-              type="button"
-              role="tab"
-              aria-selected={tab === tabValue}
-              className={tab === tabValue ? "tab-button tab-button-active" : "tab-button"}
-              onClick={() => updateParam("tab", tabValue === "all" ? null : tabValue)}
-            >
-              {t(`tab_${tabValue}`)}
-            </button>
-          ))}
-        </div>
+        <TabsBar activeTab={tab} onSelectTab={(tabValue) => updateParam("tab", tabValue === "all" ? null : tabValue)} />
         <form
           className="search-row"
           onSubmit={(e) => {
@@ -282,23 +198,7 @@ export default function Dashboard({
               {t("clearSearch")}
             </button>
           )}
-          <label
-            className="scan-label"
-            style={{
-              cursor: scanning ? "default" : "pointer",
-              opacity: scanning ? 0.6 : 1,
-            }}
-          >
-            📷 {scanning ? t("scanToSearchIdentifying") : t("scanToSearchLabel")}
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleScanFile}
-              disabled={scanning}
-              style={{ display: "none" }}
-            />
-          </label>
+          <ScanButton onSearchTermReady={handleScanResult} onNotice={setScanNotice} onError={setScanError} />
         </form>
         {scanNotice && <p style={{ fontSize: 13, color: "var(--color-success)", marginTop: 4, marginBottom: 0 }}>{scanNotice}</p>}
         {scanError && <p style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 4, marginBottom: 0 }}>{scanError}</p>}
@@ -333,127 +233,16 @@ export default function Dashboard({
           </div>
         </div>
 
-        {filterPills.length > 0 && (
-          <div className="filter-pills">
-            {filterPills.map((pill) => (
-              <span key={pill.key} className="filter-pill">
-                {pill.text}
-                <button
-                  type="button"
-                  className="filter-pill-remove"
-                  onClick={() => updateParam(pill.key, null)}
-                  aria-label={t("removeFilter", { filter: pill.text })}
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+        <FilterPills currentParams={currentParams} filterOptions={filterOptions} onRemove={(key) => updateParam(key, null)} />
       </div>
 
       {filtersOpen && (
-        <div className="filters-panel">
-          <div className="filters-grid">
-            <select
-              value={draftFilters.color}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, color: e.target.value }))}
-            >
-              <option value="">{t("filterColorAll")}</option>
-              {filterOptions.colors.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={draftFilters.rarity}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, rarity: e.target.value }))}
-            >
-              <option value="">{t("filterRarityAll")}</option>
-              {filterOptions.rarities.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={draftFilters.type}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, type: e.target.value }))}
-            >
-              <option value="">{t("filterTypeAll")}</option>
-              {filterOptions.types.map((typeOption) => (
-                <option key={typeOption} value={typeOption}>
-                  {typeOption}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={draftFilters.set}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, set: e.target.value }))}
-            >
-              <option value="">{t("filterSetAll")}</option>
-              {filterOptions.sets.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="number"
-              placeholder={t("costMinPlaceholder")}
-              value={draftFilters.costMin}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, costMin: e.target.value }))}
-            />
-            <input
-              type="number"
-              placeholder={t("costMaxPlaceholder")}
-              value={draftFilters.costMax}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, costMax: e.target.value }))}
-            />
-            <input
-              type="number"
-              placeholder={t("powerMinPlaceholder")}
-              value={draftFilters.powerMin}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, powerMin: e.target.value }))}
-            />
-            <input
-              type="number"
-              placeholder={t("powerMaxPlaceholder")}
-              value={draftFilters.powerMax}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, powerMax: e.target.value }))}
-            />
-          </div>
-
-          <div className="filters-checkboxes">
-            <label>
-              <input
-                type="checkbox"
-                checked={draftFilters.inDeck}
-                onChange={() => setDraftFilters((prev) => ({ ...prev, inDeck: !prev.inDeck }))}
-              />{" "}
-              {t("onlyInDeck")}
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draftFilters.counter}
-                onChange={() => setDraftFilters((prev) => ({ ...prev, counter: !prev.counter }))}
-              />{" "}
-              {t("onlyCounter")}
-            </label>
-          </div>
-
-          <div className="filters-apply-row">
-            <button type="button" className="filters-apply-button" onClick={applyDraftFilters}>
-              {t("applyFilters")}
-            </button>
-          </div>
-        </div>
+        <FiltersPanel
+          draftFilters={draftFilters}
+          setDraftFilters={setDraftFilters}
+          filterOptions={filterOptions}
+          onApply={applyDraftFilters}
+        />
       )}
 
       {groupedEntries.map(([groupName, groupCards]) => (
@@ -543,23 +332,6 @@ export default function Dashboard({
           }
         }
 
-        .tabs-row {
-          display: flex;
-          flex-wrap: wrap;
-          gap: var(--space-1);
-          margin-bottom: var(--space-2);
-        }
-        .tab-button {
-          background: transparent;
-          border-color: transparent;
-        }
-        .tab-button-active {
-          background: var(--color-accent-subtle);
-          border-color: var(--color-accent);
-          color: var(--color-accent);
-          font-weight: 600;
-        }
-
         .search-row {
           display: flex;
           flex-wrap: wrap;
@@ -568,18 +340,6 @@ export default function Dashboard({
         }
         .search-input {
           flex: 1 1 240px;
-        }
-
-        .scan-label {
-          display: inline-flex;
-          align-items: center;
-          min-height: var(--touch-target);
-          padding: 0 var(--space-4);
-          border: 1px solid var(--color-border-strong);
-          border-radius: var(--radius-md);
-          background: var(--color-surface);
-          font-size: var(--font-size-base);
-          white-space: nowrap;
         }
 
         .toolbar-row {
@@ -611,76 +371,6 @@ export default function Dashboard({
           color: #fff;
           font-size: var(--font-size-xs);
           font-weight: 600;
-        }
-
-        .filters-panel {
-          padding: var(--space-4);
-          margin-bottom: var(--space-4);
-          border: 1px solid var(--color-border);
-          border-radius: var(--radius-lg);
-          background: var(--color-surface);
-        }
-        .filters-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-          gap: var(--space-3);
-          margin-bottom: var(--space-4);
-        }
-        .filters-checkboxes {
-          display: flex;
-          flex-wrap: wrap;
-          gap: var(--space-2) var(--space-5);
-          font-size: var(--font-size-sm);
-        }
-
-        .filters-apply-row {
-          display: flex;
-          justify-content: flex-end;
-          margin-top: var(--space-4);
-        }
-        .filters-apply-button {
-          background: var(--color-accent);
-          border-color: var(--color-accent);
-          color: #fff;
-          font-weight: 600;
-        }
-        .filters-apply-button:hover {
-          background: var(--color-accent-hover);
-          border-color: var(--color-accent-hover);
-        }
-
-        .filter-pills {
-          display: flex;
-          flex-wrap: wrap;
-          gap: var(--space-2);
-          margin-top: var(--space-2);
-        }
-        .filter-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 4px 4px 10px;
-          border-radius: var(--radius-full);
-          background: var(--color-accent-subtle);
-          color: var(--color-accent-hover);
-          font-size: var(--font-size-xs);
-          font-weight: 500;
-        }
-        .filter-pill-remove {
-          all: unset;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 18px;
-          height: 18px;
-          min-height: 18px;
-          border-radius: 50%;
-          cursor: pointer;
-          font-size: 11px;
-          color: var(--color-accent-hover);
-        }
-        .filter-pill-remove:hover {
-          background: rgba(0, 0, 0, 0.08);
         }
 
         .card-grid {

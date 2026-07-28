@@ -18,6 +18,37 @@ STRAIGHTENED_HEIGHT = round(STRAIGHTENED_WIDTH / CARD_ASPECT_RATIO)
 # volta pra resolução original antes de usar no perspective warp.
 CONTOUR_DETECTION_WIDTH = 600
 
+# Em fundos texturizados (ex: carpete), o dilate às vezes funde a borda da
+# carta com o ruído do fundo num único contorno externo gigante, cobrindo
+# quase o quadro inteiro da foto — não é a carta, é a ausência de detecção
+# disfarçada de detecção. Um recorte de verdade sempre deixa alguma margem
+# visível (é literalmente o motivo de recortar), então um contorno cobrindo
+# quase tudo é sinal de falha, não de uma carta que preenche o quadro.
+# Descartar esses casos e cair pro fallback "sem corte" (usa a foto crua)
+# é estritamente melhor que endireitar um quadrilátero errado — verificado
+# contra fotos reais que travavam nisso (EB04-001.jpg, OP16-058.jpg): o
+# contorno "encontrado" cobria 97-99% da imagem.
+MAX_CONTOUR_AREA_RATIO = 0.9
+
+# Reflexo/brilho (comum em fotos com sleeve/toploader) fragmenta o contorno
+# externo da carta — o pedaço isolado que sobra às vezes é só a metade de
+# cima (arte), cortando o rodapé (tipo/nome/código) fora do recorte. Achado
+# com uma foto real (OP10-067.jpg em sleeve): dois contornos tinham área
+# quase empatada (26.3% vs 25.5% da imagem), mas só o SEGUNDO tinha a
+# proporção de uma carta de verdade (0.75, contra os 0.72 esperados) — o
+# primeiro era quase quadrado (0.91) e correspondia só à metade superior.
+# Escolher o maior por área pura pegava o errado; escolher por proximidade
+# da proporção real da carta acerta.
+ASPECT_RATIO_TOLERANCE = 0.15
+
+
+def _aspect_ratio_score(contour: np.ndarray) -> float:
+    (_, _), (w, h), _ = cv2.minAreaRect(contour)
+    if w == 0 or h == 0:
+        return float("inf")
+    ratio = min(w, h) / max(w, h)
+    return abs(ratio - CARD_ASPECT_RATIO)
+
 # Instanciado uma vez no processo master do gunicorn (--preload, ver
 # Dockerfile) antes do fork dos workers — carregar aqui, no import do
 # módulo, em vez de sob demanda na primeira request, evita tanto o pico de
@@ -61,17 +92,25 @@ def _find_card_contour(gray: np.ndarray) -> np.ndarray | None:
     best_quad = None
     best_area = 0
 
-    largest_contour = None
-    largest_area = 0
+    # Melhor candidato pro fallback (minAreaRect): não é o de maior área, é
+    # o de proporção mais parecida com uma carta de verdade — dois
+    # contornos podem ter área quase empatada quando o reflexo fragmenta a
+    # borda, e o maior nem sempre é o formato certo (ver
+    # ASPECT_RATIO_TOLERANCE acima).
+    best_fallback_contour = None
+    best_fallback_score = float("inf")
 
     for contour in sorted(contours, key=cv2.contourArea, reverse=True)[:10]:
         area = cv2.contourArea(contour)
-        # Carta deve ocupar uma fração razoável da foto, senão é ruído de fundo.
-        if area < image_area * 0.15:
+        # Carta deve ocupar uma fração razoável da foto, senão é ruído de
+        # fundo — mas também não pode cobrir quase tudo, senão é a borda do
+        # fundo fundida com a da carta (ver MAX_CONTOUR_AREA_RATIO acima).
+        if area < image_area * 0.15 or area > image_area * MAX_CONTOUR_AREA_RATIO:
             continue
-        if area > largest_area:
-            largest_contour = contour
-            largest_area = area
+        score = _aspect_ratio_score(contour)
+        if score < best_fallback_score:
+            best_fallback_contour = contour
+            best_fallback_score = score
         peri = cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
         if len(approx) == 4 and area > best_area:
@@ -79,11 +118,12 @@ def _find_card_contour(gray: np.ndarray) -> np.ndarray | None:
             best_area = area
 
     quad = best_quad
-    if quad is None and largest_contour is not None:
+    if quad is None and best_fallback_contour is not None and best_fallback_score <= ASPECT_RATIO_TOLERANCE:
         # Fotos de carta em sleeve/toploader costumam ter brilho/reflexo que
         # quebra o contorno em mais de 4 pontos — cai pro retângulo mínimo do
-        # maior contorno em vez de desistir e usar a foto crua sem corte algum.
-        quad = cv2.boxPoints(cv2.minAreaRect(largest_contour))
+        # contorno de formato mais parecido com uma carta, em vez de
+        # desistir e usar a foto crua sem corte algum.
+        quad = cv2.boxPoints(cv2.minAreaRect(best_fallback_contour))
 
     if quad is None:
         return None

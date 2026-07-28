@@ -20,6 +20,7 @@ export default function FiltersPanel({
     <div className="filters-panel">
       <div className="filters-grid">
         <select
+          aria-label={t("filterColorAll")}
           value={draftFilters.color}
           onChange={(e) => setDraftFilters((prev) => ({ ...prev, color: e.target.value }))}
         >
@@ -32,6 +33,7 @@ export default function FiltersPanel({
         </select>
 
         <select
+          aria-label={t("filterRarityAll")}
           value={draftFilters.rarity}
           onChange={(e) => setDraftFilters((prev) => ({ ...prev, rarity: e.target.value }))}
         >
@@ -44,6 +46,7 @@ export default function FiltersPanel({
         </select>
 
         <select
+          aria-label={t("filterTypeAll")}
           value={draftFilters.type}
           onChange={(e) => setDraftFilters((prev) => ({ ...prev, type: e.target.value }))}
         >
@@ -56,6 +59,7 @@ export default function FiltersPanel({
         </select>
 
         <select
+          aria-label={t("filterSetAll")}
           value={draftFilters.set}
           onChange={(e) => setDraftFilters((prev) => ({ ...prev, set: e.target.value }))}
         >

@@ -143,6 +143,14 @@ export default function Dashboard({
     updateParam("search", term);
   }
 
+  function handleScanDirectApply(term: string) {
+    // Aplica direto (código lido com confiança) — limpa qualquer lista de
+    // candidatos ainda visível de um scan anterior, senão ela ficaria presa
+    // na tela sobre o resultado novo.
+    handleScanResult(term);
+    setScanCandidates([]);
+  }
+
   function handleSelectScanCandidate(candidate: ScanCandidate) {
     const term = candidate.matchedByCode ? candidate.cardSetId : stripVariantSuffix(candidate.cardName);
     handleScanResult(term);
@@ -209,6 +217,7 @@ export default function Dashboard({
             </button>
           )}
           <ScanButton
+            onSearchTermReady={handleScanDirectApply}
             onCandidates={setScanCandidates}
             onNotice={setScanNotice}
             onError={(message) => {

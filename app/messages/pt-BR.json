@@ -23,6 +23,7 @@
     "clearSearch": "Limpar busca",
     "scanToSearchIdentifying": "Identificando...",
     "scanToSearchLabel": "Escanear pra buscar",
+    "scanNoticeByCode": "Carta identificada pelo código: {name} ({code}) — não é essa? ajuste a busca acima.",
     "scanNoticeChooseCandidate": "Selecione a carta correta:",
     "scanCandidatesDismiss": "Fechar",
     "scanCandidateMatchedByCode": "código",

@@ -5,17 +5,20 @@ import { useTranslations } from "next-intl";
 import type { ScanCandidate } from "../lib/dashboardTypes";
 
 // Botão de escanear-pra-buscar: fotografa uma carta, manda pro /api/scan, e
-// devolve pro pai a lista de candidatos inteira (via onCandidates) em vez de
-// aplicar cegamente o #1 na busca — o matching por nome/código erra o
-// candidato certo com frequência real (ver
-// memory/ocr_code_recognition_limitation.md, ~metade das fotos testadas),
-// então deixar o usuário escolher entre os melhores palpites com 1 toque
-// evita cair silenciosamente numa busca errada.
+// decide entre dois caminhos. Quando o candidato #1 bateu pelo código
+// impresso (matchedByCode) — sinal forte, já filtrado por um threshold de
+// similaridade em cardMatch.ts — aplica a busca direto, sem passo extra.
+// Quando não (nome/texto only, sinal mais fraco e mais propenso a apontar
+// pra carta errada — ver memory/ocr_code_recognition_limitation.md), devolve
+// a lista inteira de candidatos (via onCandidates) pro usuário escolher com
+// 1 toque em vez de cair silenciosamente numa busca errada.
 export default function ScanButton({
+  onSearchTermReady,
   onCandidates,
   onNotice,
   onError,
 }: {
+  onSearchTermReady: (term: string) => void;
   onCandidates: (candidates: ScanCandidate[]) => void;
   onNotice: (message: string | null) => void;
   onError: (message: string | null) => void;
@@ -43,13 +46,19 @@ export default function ScanButton({
       }
 
       const candidates: ScanCandidate[] = data.candidates ?? [];
-      if (candidates.length === 0) {
+      const top = candidates[0];
+      if (!top) {
         onError(t("scanErrorNoCandidates"));
         return;
       }
 
-      onNotice(t("scanNoticeChooseCandidate"));
-      onCandidates(candidates);
+      if (top.matchedByCode) {
+        onSearchTermReady(top.cardSetId);
+        onNotice(t("scanNoticeByCode", { name: top.cardName, code: top.cardSetId }));
+      } else {
+        onNotice(t("scanNoticeChooseCandidate"));
+        onCandidates(candidates);
+      }
     } catch {
       onError(t("scanErrorUpload"));
     } finally {

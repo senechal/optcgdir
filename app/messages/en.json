@@ -23,6 +23,7 @@
     "clearSearch": "Clear search",
     "scanToSearchIdentifying": "Identifying...",
     "scanToSearchLabel": "Scan to search",
+    "scanNoticeByCode": "Card identified by code: {name} ({code}) — not the right one? adjust the search above.",
     "scanNoticeChooseCandidate": "Select the right card:",
     "scanCandidatesDismiss": "Close",
     "scanCandidateMatchedByCode": "code",

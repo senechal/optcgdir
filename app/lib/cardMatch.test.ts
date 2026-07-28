@@ -104,6 +104,53 @@ describe("rankCardsByOcrText", () => {
     expect(result[0].cardImageId).toBe("high");
   });
 
+  it("treats a code missing just its last digit as a match via prefix when the name also matches", () => {
+    const cards = [
+      card({ cardImageId: "A", cardSetId: "P-101", cardName: "Tony Tony.Chopper" }),
+      card({ cardImageId: "B", cardSetId: "P-102", cardName: "Someone Else" }),
+    ];
+    // "P-10" is a 1-character-short prefix of BOTH "P-101" and "P-102" --
+    // a short code like this would fall below the fuzzy-similarity
+    // threshold on its own (losing 1 of 4 chars is a big fraction), so
+    // without the explicit prefix-match path neither would count as a code
+    // match. Only A's name appears in the OCR text, so only A gets the
+    // prefix boost -- B stays unmatched despite sharing the same prefix.
+    const result = rankCardsByOcrText("noise P-10 noise\nTony Tony Chopper\nCHARACTER", cards);
+    expect(result[0].cardImageId).toBe("A");
+    expect(result[0].matchedByCode).toBe(true);
+  });
+
+  it("does not treat a same-length-but-different code substring as a missing-last-digit prefix match", () => {
+    const cards = [
+      card({ cardImageId: "A", cardSetId: "OP12-001", cardName: "Monkey.D.Luffy" }),
+      card({ cardImageId: "B", cardSetId: "OP01-008", cardName: "Cavendish" }),
+    ];
+    // "ZZ12-00" is the same length as "op12001" minus 1, but isn't actually
+    // a prefix of it (different letters/digits) -- must not be boosted
+    // into a false code match. Falls back to the OCR'd name instead.
+    const result = rankCardsByOcrText("noise ZZ12-00 noise\nCavendish\nCHARACTER", cards);
+    expect(result[0].cardImageId).toBe("B");
+    expect(result[0].matchedByCode).toBe(false);
+  });
+
+  it("does not grant a prefix-match code bonus to a card whose name doesn't appear anywhere in the OCR text", () => {
+    // Real bug found while testing: OCR dropped the leading "O" off
+    // "OP10-067" (Senor Pink), leaving "P10-0" -> stripped "p10". That
+    // string happens to be a valid 1-char-short prefix of a totally
+    // unrelated real card's code ("P-105", a different character) --
+    // without requiring the name to also show up, that unrelated card was
+    // winning with a false matchedByCode: true.
+    const cards = [
+      card({ cardImageId: "unrelated", cardSetId: "P-105", cardName: "Sabo" }),
+      card({ cardImageId: "real", cardSetId: "OP10-067", cardName: "Senor Pink" }),
+    ];
+    const ocrText = "noise\nCHARACTER\nSenor Pink\nP10-0\nDonquixote Pirates";
+    const result = rankCardsByOcrText(ocrText, cards);
+    expect(result[0].cardImageId).toBe("real");
+    const unrelated = result.find((c) => c.cardImageId === "unrelated");
+    expect(unrelated?.matchedByCode ?? false).toBe(false);
+  });
+
   it("defaults the limit to 8 candidates", () => {
     const cards = Array.from({ length: 10 }, (_, i) =>
       card({ cardImageId: `c${i}`, cardSetId: `OP01-0${i}`, cardName: "Nami" })

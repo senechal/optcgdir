@@ -186,12 +186,12 @@ describe("Dashboard", () => {
     await waitFor(() => expect(refresh).toHaveBeenCalledOnce());
   });
 
-  it("shows scan candidates to choose from instead of applying the top guess directly", async () => {
+  it("shows scan candidates to choose from when the top guess isn't a confident code match", async () => {
     (fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({
         candidates: [
-          { cardImageId: "A", cardSetId: "OP12-001", cardName: "Nami", matchedByCode: true, localImagePath: null },
+          { cardImageId: "A", cardSetId: "OP12-001", cardName: "Nami", matchedByCode: false, localImagePath: null },
           { cardImageId: "B", cardSetId: "OP12-002", cardName: "Zoro", matchedByCode: false, localImagePath: null },
         ],
       }),
@@ -205,6 +205,23 @@ describe("Dashboard", () => {
     expect(screen.getByText("Nami")).toBeInTheDocument();
     expect(screen.getByText("Zoro")).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it("applies the search term directly, skipping the picker, when the top guess is a confident code match", async () => {
+    (fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [{ cardImageId: "A", cardSetId: "OP12-001", cardName: "Nami", matchedByCode: true, localImagePath: null }],
+      }),
+    });
+    renderDashboard();
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["x"], "card.jpg", { type: "image/jpeg" });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/?search=OP12-001"));
+    expect(screen.getByPlaceholderText(/Buscar por nome/)).toHaveValue("OP12-001");
+    expect(screen.queryByText("Selecione a carta correta:")).not.toBeInTheDocument();
   });
 
   it("applies the search term for the candidate the user picks from the scan suggestions", async () => {
@@ -231,7 +248,7 @@ describe("Dashboard", () => {
     (fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({
-        candidates: [{ cardImageId: "A", cardSetId: "OP12-001", cardName: "Nami", matchedByCode: true, localImagePath: null }],
+        candidates: [{ cardImageId: "A", cardSetId: "OP12-001", cardName: "Nami", matchedByCode: false, localImagePath: null }],
       }),
     });
     renderDashboard();

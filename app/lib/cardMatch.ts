@@ -89,6 +89,22 @@ function bestCodeSimilarity(candidates: string[], code: string): number {
   return best;
 }
 
+// A similaridade de Levenshtein pune códigos curtos com muito mais força
+// que longos: perder o último dígito de "op15086" (7 chars) ainda dá 0.86
+// de similaridade, mas perder o de um código curto tipo "p101" (4 chars)
+// derruba pra 0.75 — abaixo do threshold, mesmo sendo exatamente o mesmo
+// tipo de erro de OCR. Detecta esse caso à parte: candidato é um prefixo
+// exato do código real, faltando só o último caractere. Na pior das
+// hipóteses existem 10 cartas reais com esse mesmo prefixo (um dígito a
+// mais), e a comparação por nome (lineSim/tokenRatio) desempata entre elas.
+// Sem guarda de tamanho mínimo: CARD_CODE_PATTERN já garante candidatos com
+// pelo menos 3 caracteres (1 letra + 2 dígitos), então um prefixo válido só
+// existe a partir de um código real de 4+ caracteres — curto demais pra um
+// prefixo de 1-2 caracteres virar ruído por acaso.
+function hasPrefixMatch(candidates: string[], code: string): boolean {
+  return candidates.some((candidate) => candidate.length === code.length - 1 && code.startsWith(candidate));
+}
+
 function tokenOverlapRatio(cardName: string, ocrBlob: string): number {
   const tokens = cardName.split(" ").filter((t) => t.length >= 3);
   if (tokens.length === 0) return 0;
@@ -113,13 +129,35 @@ export function rankCardsByOcrText(
   // descarta o candidato certo.
   const CODE_SIMILARITY_THRESHOLD = 0.8;
 
+  // Piso de similaridade garantido pra um prefixo exato (só falta o último
+  // dígito) — não é 1.0 (isso ficaria indistinguível de um match perfeito
+  // de verdade), mas alto o bastante pra sempre cruzar o threshold acima,
+  // não importa quão curto seja o código.
+  const PREFIX_MATCH_SIMILARITY_FLOOR = 0.9;
+
   const scored: CardMatch[] = cards.map((card) => {
     const normalizedName = normalize(card.cardName);
-    const codeSimilarity = bestCodeSimilarity(codeCandidates, card.cardSetId.replace(/-/g, ""));
-    const matchedByCode = codeSimilarity >= CODE_SIMILARITY_THRESHOLD;
-    const codeBonus = matchedByCode ? codeSimilarity * 100 : 0;
+    const strippedCode = card.cardSetId.replace(/-/g, "");
+    const codeSimilarity = bestCodeSimilarity(codeCandidates, strippedCode);
     const tokenRatio = tokenOverlapRatio(normalizedName, ocrBlob);
     const lineSim = bestLineSimilarity(normalizedName, ocrLines);
+    // Um prefixo curto (ex: "p10") pode colidir por acaso com um código de
+    // uma carta totalmente diferente, sem nenhuma relação com a foto real —
+    // aconteceu de verdade: OCR perdeu o "O" de "OP10-067" (Senor Pink),
+    // sobrou "P10-0", e isso por acaso é um prefixo válido de "P-105"
+    // (Sabo, carta sem nenhuma relação). Só confia no prefixo quando o
+    // nome da própria carta também aparece de alguma forma no texto —
+    // assim o prefixo só reforça candidatos que o nome já sustenta.
+    // lineSim (Levenshtein) quase nunca é exatamente 0 pra duas strings
+    // não-vazias, então "lineSim > 0" não filtraria nada de verdade — exige
+    // um piso real de parecença, não só "não é zero por coincidência".
+    const hasNameSignal = tokenRatio > 0 || lineSim >= 0.5;
+    const effectiveCodeSimilarity =
+      hasNameSignal && hasPrefixMatch(codeCandidates, strippedCode)
+        ? Math.max(codeSimilarity, PREFIX_MATCH_SIMILARITY_FLOOR)
+        : codeSimilarity;
+    const matchedByCode = effectiveCodeSimilarity >= CODE_SIMILARITY_THRESHOLD;
+    const codeBonus = matchedByCode ? effectiveCodeSimilarity * 100 : 0;
     // Testado contra 28 fotos reais categorizadas: bestLineSimilarity (nome
     // inteiro vs. uma linha do OCR) prevê a carta certa com bem mais
     // confiabilidade que tokenOverlapRatio (que reage a qualquer palavra

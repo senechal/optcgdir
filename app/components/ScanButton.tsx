@@ -2,23 +2,21 @@
 
 import { useState, type ChangeEvent } from "react";
 import { useTranslations } from "next-intl";
-import { stripVariantSuffix } from "../lib/cardDisplay";
 import type { ScanCandidate } from "../lib/dashboardTypes";
 
-// Botão de escanear-pra-buscar: fotografa uma carta, manda pro /api/scan,
-// e devolve pro componente pai (via onSearchTermReady) o termo de busca a
-// aplicar — código impresso se o OCR achou um com confiança, senão o nome
-// (mais abrangente, mas evita filtrar pela carta errada por causa de um
-// código mal lido). Notice/erro sobem pro pai via callback em vez de
-// renderizar aqui, porque no layout original eles ficam FORA do form de
-// busca (parágrafos de largura cheia), enquanto este botão em si precisa
-// continuar DENTRO do form (item do flex row de busca).
+// Botão de escanear-pra-buscar: fotografa uma carta, manda pro /api/scan, e
+// devolve pro pai a lista de candidatos inteira (via onCandidates) em vez de
+// aplicar cegamente o #1 na busca — o matching por nome/código erra o
+// candidato certo com frequência real (ver
+// memory/ocr_code_recognition_limitation.md, ~metade das fotos testadas),
+// então deixar o usuário escolher entre os melhores palpites com 1 toque
+// evita cair silenciosamente numa busca errada.
 export default function ScanButton({
-  onSearchTermReady,
+  onCandidates,
   onNotice,
   onError,
 }: {
-  onSearchTermReady: (term: string) => void;
+  onCandidates: (candidates: ScanCandidate[]) => void;
   onNotice: (message: string | null) => void;
   onError: (message: string | null) => void;
 }) {
@@ -45,20 +43,13 @@ export default function ScanButton({
       }
 
       const candidates: ScanCandidate[] = data.candidates ?? [];
-      const top = candidates[0];
-      if (!top) {
+      if (candidates.length === 0) {
         onError(t("scanErrorNoCandidates"));
         return;
       }
 
-      if (top.matchedByCode) {
-        onSearchTermReady(top.cardSetId);
-        onNotice(t("scanNoticeByCode", { name: top.cardName, code: top.cardSetId }));
-      } else {
-        const searchTerm = stripVariantSuffix(top.cardName);
-        onSearchTermReady(searchTerm);
-        onNotice(t("scanNoticeByName", { term: searchTerm }));
-      }
+      onNotice(t("scanNoticeChooseCandidate"));
+      onCandidates(candidates);
     } catch {
       onError(t("scanErrorUpload"));
     } finally {

@@ -8,11 +8,13 @@ import TabsBar from "./TabsBar";
 import FilterPills from "./FilterPills";
 import FiltersPanel from "./FiltersPanel";
 import ScanButton from "./ScanButton";
+import ScanCandidatesList from "./ScanCandidatesList";
 import CardTile from "./CardTile";
 import CardRow from "./CardRow";
 import CardImageModal from "./CardImageModal";
 import type { Locale } from "../i18n/request";
-import type { CardWithCollectionInfo, FilterOptions, DraftFilters, Tab } from "../lib/dashboardTypes";
+import { stripVariantSuffix } from "../lib/cardDisplay";
+import type { CardWithCollectionInfo, FilterOptions, DraftFilters, Tab, ScanCandidate } from "../lib/dashboardTypes";
 
 export default function Dashboard({
   cards,
@@ -41,6 +43,7 @@ export default function Dashboard({
   const [searchInput, setSearchInput] = useState(currentParams.search || "");
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const [scanCandidates, setScanCandidates] = useState<ScanCandidate[]>([]);
   const [enlargedCard, setEnlargedCard] = useState<CardWithCollectionInfo | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -140,6 +143,13 @@ export default function Dashboard({
     updateParam("search", term);
   }
 
+  function handleSelectScanCandidate(candidate: ScanCandidate) {
+    const term = candidate.matchedByCode ? candidate.cardSetId : stripVariantSuffix(candidate.cardName);
+    handleScanResult(term);
+    setScanCandidates([]);
+    setScanNotice(null);
+  }
+
   async function mutateCollection(cardImageId: string, action: string) {
     await fetch("/api/collection", {
       method: "POST",
@@ -198,10 +208,27 @@ export default function Dashboard({
               {t("clearSearch")}
             </button>
           )}
-          <ScanButton onSearchTermReady={handleScanResult} onNotice={setScanNotice} onError={setScanError} />
+          <ScanButton
+            onCandidates={setScanCandidates}
+            onNotice={setScanNotice}
+            onError={(message) => {
+              setScanError(message);
+              setScanCandidates([]);
+            }}
+          />
         </form>
         {scanNotice && <p style={{ fontSize: 13, color: "var(--color-success)", marginTop: 4, marginBottom: 0 }}>{scanNotice}</p>}
         {scanError && <p style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 4, marginBottom: 0 }}>{scanError}</p>}
+        {scanCandidates.length > 0 && (
+          <ScanCandidatesList
+            candidates={scanCandidates}
+            onSelect={handleSelectScanCandidate}
+            onDismiss={() => {
+              setScanCandidates([]);
+              setScanNotice(null);
+            }}
+          />
+        )}
 
         <div className="toolbar-row">
           <select

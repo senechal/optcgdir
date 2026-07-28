@@ -1,7 +1,8 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "../lib/prisma";
 import { getDefaultUserId } from "../lib/currentUser";
-import Dashboard, { type CardWithCollectionInfo } from "../components/Dashboard";
+import Dashboard from "../components/Dashboard";
+import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 import packageJson from "../package.json";
 import type { Locale } from "../i18n/request";
 

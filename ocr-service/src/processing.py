@@ -1,28 +1,14 @@
-"""Pré-processamento (OpenCV) + OCR (Tesseract) de uma foto de carta."""
+"""Pré-processamento (OpenCV) + OCR (PaddleOCR, com Tesseract como fallback) de uma foto de carta."""
 
 import cv2
 import numpy as np
 import pytesseract
+from paddleocr import PaddleOCR
 
 # Card real: proporção 63mm x 88mm (mesma da maioria dos TCGs).
 CARD_ASPECT_RATIO = 63 / 88
 STRAIGHTENED_WIDTH = 630
 STRAIGHTENED_HEIGHT = round(STRAIGHTENED_WIDTH / CARD_ASPECT_RATIO)
-
-# O código impresso (ex: "OP12-001") fica sempre numa faixa fina no rodapé
-# da carta — no canto esquerdo em carta de Personagem/Evento, no direito em
-# carta de Líder (o esquerdo ali é ocupado pelo ícone de cor/atributo).
-# Pequeno demais pra sair legível quando o OCR roda na carta inteira, então
-# isolamos e ampliamos os dois cantos numa passada à parte.
-CODE_STRIP_TOP_RATIO = 0.885
-CODE_STRIP_BOTTOM_RATIO = 0.95
-CODE_STRIP_CORNER_WIDTH_RATIO = 0.35
-# --psm 11 (texto esparso, sem presumir bloco/linha única) leu bem melhor
-# aqui do que --psm 7 — o corte, mesmo isolado, ainda tem ícones ao lado do
-# texto, e o Tesseract não considera isso "uma linha só". Whitelist de
-# caracteres não ajudou (cortava o hífen do meio do código e colava dígitos
-# de ícones vizinhos) — melhor deixar solto e extrair com regex depois.
-CODE_OCR_CONFIG = "--oem 1 --psm 11"
 
 # Fotos de celular vêm em resolução bem alta — rodar o Canny direto nelas faz
 # a própria textura/traços da ilustração virarem "bordas", fragmentando o
@@ -31,6 +17,18 @@ CODE_OCR_CONFIG = "--oem 1 --psm 11"
 # fino e ainda preserva o contorno grande da carta; escalamos o resultado de
 # volta pra resolução original antes de usar no perspective warp.
 CONTOUR_DETECTION_WIDTH = 600
+
+# Instanciado uma vez no processo master do gunicorn (--preload, ver
+# Dockerfile) antes do fork dos workers — carregar aqui, no import do
+# módulo, em vez de sob demanda na primeira request, evita tanto o pico de
+# latência do carregamento do modelo quanto duplicar a memória dos pesos em
+# cada worker (compartilhada via copy-on-write depois do fork).
+# Comparado ao Tesseract (ver ocr_code_recognition_limitation na memória do
+# projeto): testado contra fotos reais categorizadas, o PaddleOCR lê o
+# código impresso e o nome da carta com confiança alta mesmo em condições
+# ruins (carta dentro de slab), sem precisar isolar/ampliar cantos como o
+# pipeline antigo baseado em Tesseract exigia.
+_paddle_ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
 
 
 def _order_points(pts: np.ndarray) -> np.ndarray:
@@ -108,36 +106,16 @@ def _straighten(image: np.ndarray, quad: np.ndarray) -> np.ndarray:
     return cv2.warpPerspective(image, matrix, (STRAIGHTENED_WIDTH, STRAIGHTENED_HEIGHT))
 
 
-def _ocr_region(region_bgr: np.ndarray) -> str:
-    gray = cv2.cvtColor(region_bgr, cv2.COLOR_BGR2GRAY)
-    # Recorte é bem pequeno (só um canto do rodapé) — amplia bastante antes
-    # de binarizar, senão o texto vira só um borrão de poucos pixels de altura.
-    gray = cv2.resize(gray, None, fx=6, fy=6, interpolation=cv2.INTER_CUBIC)
-    gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(gray)
-
-    _, thresholded = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    inverted = cv2.bitwise_not(thresholded)
-
-    # Não dá pra saber de antemão se o rodapé é texto claro em fundo escuro
-    # ou o contrário — roda os dois e junta; o pior caso é só mais ruído no
-    # texto (o match de código é por regex depois, então não atrapalha).
-    return "\n".join(
-        pytesseract.image_to_string(variant, config=CODE_OCR_CONFIG)
-        for variant in (thresholded, inverted)
-    )
-
-
-def _ocr_code_strip(straightened_bgr: np.ndarray) -> str:
-    height, width = straightened_bgr.shape[:2]
-    top = round(height * CODE_STRIP_TOP_RATIO)
-    bottom = round(height * CODE_STRIP_BOTTOM_RATIO)
-    band = straightened_bgr[top:bottom, 0:width]
-
-    corner_width = round(width * CODE_STRIP_CORNER_WIDTH_RATIO)
-    left_corner = band[:, 0:corner_width]
-    right_corner = band[:, width - corner_width : width]
-
-    return "\n".join([_ocr_region(left_corner), _ocr_region(right_corner)])
+def _paddle_lines(image_bgr: np.ndarray) -> list[str]:
+    result = _paddle_ocr.ocr(image_bgr, cls=True)
+    lines = result[0] if result and isinstance(result[0], list) else (result or [])
+    # PaddleOCR já detecta e recorta cada linha de texto sozinho (é o que o
+    # torna melhor que o Tesseract pra fonte pequena/densa do rodapé da
+    # carta) — não precisamos mais isolar/ampliar cantos na mão. Ordena de
+    # cima pra baixo só pra manter a saída legível/estável; cardMatch.ts já
+    # compara contra cada linha independente da ordem.
+    ordered = sorted(lines, key=lambda line: line[0][0][1])
+    return [text for _, (text, _confidence) in ordered]
 
 
 def extract_text(image_path: str) -> str:
@@ -153,10 +131,15 @@ def extract_text(image_path: str) -> str:
     quad = _find_card_contour(gray)
     target = _straighten(image, quad) if quad is not None else image
 
-    target_gray = cv2.cvtColor(target, cv2.COLOR_BGR2GRAY)
-    full_text = pytesseract.image_to_string(target_gray, lang="eng")
-    code_text = _ocr_code_strip(target)
+    try:
+        lines = _paddle_lines(target)
+        if lines:
+            return "\n".join(lines)
+    except Exception:  # noqa: BLE001 - fallback deliberado, ver comentário abaixo
+        pass
 
-    # Código isolado primeiro: é o sinal mais forte pro ranking em
-    # cardMatch.ts, então deve vir antes do texto cheio da carta.
-    return f"{code_text}\n{full_text}"
+    # PaddleOCR falhando (ou não achando nenhuma linha) não pode derrubar o
+    # scan inteiro — cai pro Tesseract, mais fraco mas confiável, em vez de
+    # devolver erro pro usuário.
+    target_gray = cv2.cvtColor(target, cv2.COLOR_BGR2GRAY)
+    return pytesseract.image_to_string(target_gray, lang="eng")

@@ -20,7 +20,13 @@ export type CardMatch = MatchableCard & { score: number; matchedByCode: boolean 
 // impresso, ex: "OP12-001") frequentemente perde esse traço na binarização
 // — quem compara os dois lados remove o hífen antes, então não faz
 // diferença se o texto reconhecido veio como "OP12001" ou "OP12-001".
-const CARD_CODE_PATTERN = /[A-Z]{1,4}\d{0,2}-?\d{3}/g;
+// Últimos 2-3 dígitos (não só 3): mesmo o PaddleOCR, bem mais preciso que o
+// Tesseract, às vezes perde 1 caractere do final (ex: "OP15-08" em vez de
+// "OP15-086") — exigir os 3 dígitos completos descartava o candidato de
+// código inteiro nesse caso, deixando o desempate só por nome (que não
+// resolve quando várias cartas diferentes têm o mesmo nome em sets
+// diferentes, ex: várias impressões de "Nami").
+const CARD_CODE_PATTERN = /[A-Z]{1,4}\d{0,2}-?\d{2,3}/g;
 
 function normalize(text: string): string {
   return text

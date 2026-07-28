@@ -49,12 +49,11 @@ type DraftFilters = {
   costMax: string;
   powerMin: string;
   powerMax: string;
-  owned: boolean;
-  duplicates: boolean;
-  wantsTrade: boolean;
   inDeck: boolean;
   counter: boolean;
 };
+
+type Tab = "all" | "grouped" | "owned" | "duplicates" | "wantsTrade";
 
 // O card_name da optcgapi já vem com sufixos como "(Parallel)" ou
 // "(Alternative Art)" — removemos porque a variante já é representada
@@ -78,7 +77,7 @@ export default function Dashboard({
   filterOptions,
   currentParams,
   view,
-  groupBySet,
+  tab,
   version,
   locale,
 }: {
@@ -86,10 +85,13 @@ export default function Dashboard({
   filterOptions: FilterOptions;
   currentParams: Record<string, string>;
   view: "grid" | "list";
-  groupBySet: boolean;
+  tab: Tab;
   version: string;
   locale: Locale;
 }) {
+  // A aba "grouped" é só um modo de exibição do catálogo inteiro — não
+  // filtra por posse, ao contrário de "owned"/"duplicates"/"wantsTrade".
+  const groupBySet = tab === "grouped";
   const t = useTranslations("Dashboard");
   const router = useRouter();
   const pathname = usePathname();
@@ -112,9 +114,6 @@ export default function Dashboard({
     currentParams.costMax,
     currentParams.powerMin,
     currentParams.powerMax,
-    currentParams.owned,
-    currentParams.duplicates,
-    currentParams.wantsTrade,
     currentParams.inDeck,
     currentParams.counter,
   ].filter(Boolean).length;
@@ -138,10 +137,6 @@ export default function Dashboard({
     updateParams({ [key]: value });
   }
 
-  function toggleParam(key: string) {
-    updateParam(key, currentParams[key] === "1" ? null : "1");
-  }
-
   // Filtros do painel colapsável não aplicam na hora — ficam num rascunho
   // local até o usuário clicar em "Aplicar filtros". Cor/ordenação/busca/
   // agrupar continuam instantâneos (não são "filtros" que estreitam a
@@ -156,9 +151,6 @@ export default function Dashboard({
       costMax: params.costMax || "",
       powerMin: params.powerMin || "",
       powerMax: params.powerMax || "",
-      owned: params.owned === "1",
-      duplicates: params.duplicates === "1",
-      wantsTrade: params.wantsTrade === "1",
       inDeck: params.inDeck === "1",
       counter: params.counter === "1",
     };
@@ -182,9 +174,6 @@ export default function Dashboard({
     currentParams.costMax,
     currentParams.powerMin,
     currentParams.powerMax,
-    currentParams.owned,
-    currentParams.duplicates,
-    currentParams.wantsTrade,
     currentParams.inDeck,
     currentParams.counter,
   ]);
@@ -199,9 +188,6 @@ export default function Dashboard({
       costMax: draftFilters.costMax || null,
       powerMin: draftFilters.powerMin || null,
       powerMax: draftFilters.powerMax || null,
-      owned: draftFilters.owned ? "1" : null,
-      duplicates: draftFilters.duplicates ? "1" : null,
-      wantsTrade: draftFilters.wantsTrade ? "1" : null,
       inDeck: draftFilters.inDeck ? "1" : null,
       counter: draftFilters.counter ? "1" : null,
     });
@@ -230,9 +216,6 @@ export default function Dashboard({
   if (currentParams.costMax) filterPills.push({ key: "costMax", text: `${t("colCost")} ≤ ${currentParams.costMax}` });
   if (currentParams.powerMin) filterPills.push({ key: "powerMin", text: `${t("colPower")} ≥ ${currentParams.powerMin}` });
   if (currentParams.powerMax) filterPills.push({ key: "powerMax", text: `${t("colPower")} ≤ ${currentParams.powerMax}` });
-  if (currentParams.owned === "1") filterPills.push({ key: "owned", text: t("onlyOwned") });
-  if (currentParams.duplicates === "1") filterPills.push({ key: "duplicates", text: t("onlyDuplicates") });
-  if (currentParams.wantsTrade === "1") filterPills.push({ key: "wantsTrade", text: t("onlyWantsTrade") });
   if (currentParams.inDeck === "1") filterPills.push({ key: "inDeck", text: t("onlyInDeck") });
   if (currentParams.counter === "1") filterPills.push({ key: "counter", text: t("onlyCounter") });
 
@@ -315,6 +298,20 @@ export default function Dashboard({
       </p>
 
       <div className="sticky-controls">
+        <div className="tabs-row" role="tablist">
+          {(["all", "grouped", "owned", "duplicates", "wantsTrade"] as Tab[]).map((tabValue) => (
+            <button
+              key={tabValue}
+              type="button"
+              role="tab"
+              aria-selected={tab === tabValue}
+              className={tab === tabValue ? "tab-button tab-button-active" : "tab-button"}
+              onClick={() => updateParam("tab", tabValue === "all" ? null : tabValue)}
+            >
+              {t(`tab_${tabValue}`)}
+            </button>
+          ))}
+        </div>
         <form
           className="search-row"
           onSubmit={(e) => {
@@ -491,30 +488,6 @@ export default function Dashboard({
             <label>
               <input
                 type="checkbox"
-                checked={draftFilters.owned}
-                onChange={() => setDraftFilters((prev) => ({ ...prev, owned: !prev.owned }))}
-              />{" "}
-              {t("onlyOwned")}
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draftFilters.duplicates}
-                onChange={() => setDraftFilters((prev) => ({ ...prev, duplicates: !prev.duplicates }))}
-              />{" "}
-              {t("onlyDuplicates")}
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draftFilters.wantsTrade}
-                onChange={() => setDraftFilters((prev) => ({ ...prev, wantsTrade: !prev.wantsTrade }))}
-              />{" "}
-              {t("onlyWantsTrade")}
-            </label>
-            <label>
-              <input
-                type="checkbox"
                 checked={draftFilters.inDeck}
                 onChange={() => setDraftFilters((prev) => ({ ...prev, inDeck: !prev.inDeck }))}
               />{" "}
@@ -527,10 +500,6 @@ export default function Dashboard({
                 onChange={() => setDraftFilters((prev) => ({ ...prev, counter: !prev.counter }))}
               />{" "}
               {t("onlyCounter")}
-            </label>
-            <label>
-              <input type="checkbox" checked={groupBySet} onChange={() => toggleParam("groupBySet")} />{" "}
-              {t("groupBySet")}
             </label>
           </div>
 
@@ -627,6 +596,23 @@ export default function Dashboard({
             margin: 0 calc(var(--space-8) * -1) var(--space-4);
             padding: var(--space-2) var(--space-8) var(--space-3);
           }
+        }
+
+        .tabs-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--space-1);
+          margin-bottom: var(--space-2);
+        }
+        .tab-button {
+          background: transparent;
+          border-color: transparent;
+        }
+        .tab-button-active {
+          background: var(--color-accent-subtle);
+          border-color: var(--color-accent);
+          color: var(--color-accent);
+          font-weight: 600;
         }
 
         .search-row {

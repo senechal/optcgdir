@@ -47,16 +47,26 @@ export default async function Home({
   const search = first(searchParams.search)?.trim();
   const onlyWithCounter = first(searchParams.counter) === "1";
   const onlyInDeck = first(searchParams.inDeck) === "1";
-  const onlyDuplicates = first(searchParams.duplicates) === "1";
-  const onlyWantsTrade = first(searchParams.wantsTrade) === "1";
-  const onlyOwned = first(searchParams.owned) === "1";
   const costMin = first(searchParams.costMin);
   const costMax = first(searchParams.costMax);
   const powerMin = first(searchParams.powerMin);
   const powerMax = first(searchParams.powerMax);
   const sort = first(searchParams.sort) || "code";
   const view = (first(searchParams.view) as "grid" | "list") || "grid";
-  const groupBySet = first(searchParams.groupBySet) === "1";
+
+  // Abas substituem os antigos checkboxes "só na minha coleção" / "só
+  // duplicatas" / "só quero trocar" / "agrupar por set" — cada uma
+  // representa um modo de navegação, não um refinamento pra combinar
+  // livremente com outros, então vira uma escolha exclusiva (tab) em vez
+  // de checkbox no painel de filtros. "grouped" é só modo de exibição
+  // (agrupa o catálogo inteiro por set) — não filtra por posse, ao
+  // contrário de "owned"/"duplicates"/"wantsTrade".
+  const tab =
+    (first(searchParams.tab) as "all" | "grouped" | "owned" | "duplicates" | "wantsTrade") || "all";
+  const onlyOwned = tab === "owned";
+  const onlyDuplicates = tab === "duplicates";
+  const onlyWantsTrade = tab === "wantsTrade";
+  const groupBySet = tab === "grouped";
 
   // Filtros que dá pra empurrar direto pro Postgres
   const where: Record<string, unknown> = {};
@@ -163,7 +173,7 @@ export default async function Home({
       filterOptions={filterOptions}
       currentParams={currentParamsRecord}
       view={view}
-      groupBySet={groupBySet}
+      tab={tab}
       version={appVersion}
       locale={locale as Locale}
     />

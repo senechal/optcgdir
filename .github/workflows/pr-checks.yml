@@ -14,7 +14,10 @@ jobs:
       - name: Configura Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # jsdom/@testing-library/undici (deps de teste) exigem Node >=22 —
+          # o app em si (Next.js/Prisma) roda em Node 20 normalmente, mas o
+          # ambiente de CI aqui é só pra rodar os testes.
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: app/package-lock.json
 

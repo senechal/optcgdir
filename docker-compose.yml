@@ -72,6 +72,11 @@ services:
       icon: https://cf.geekdo-images.com/cpyej29PfijgBDtiOuSFsQ__imagepagezoom/img/xms1Q7H_rdBvATzPJuiISO29Xt8=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic6974116.jpg
     container_name: optcg-ocr-service
     restart: unless-stopped
+    environment:
+      # Quanto tempo o gunicorn espera por request antes de matar o worker
+      # (ver PR #35) — CPUs mais fracas que a de desenvolvimento podem
+      # precisar de mais que o padrão de 120s pra processar uma foto.
+      GUNICORN_TIMEOUT: ${OCR_GUNICORN_TIMEOUT:-120}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 10s

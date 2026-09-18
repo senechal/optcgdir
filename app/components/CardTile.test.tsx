@@ -46,15 +46,9 @@ describe("CardTile", () => {
     expect(screen.queryByText(/Qtd:/)).not.toBeInTheDocument();
   });
 
-  it("shows quantity without a duplicate marker when quantity is exactly 1", () => {
+  it("shows the quantity when owned", () => {
     renderWithIntl(<CardTile card={card({ quantity: 1 })} onMutate={vi.fn()} onEnlarge={vi.fn()} />);
     expect(screen.getByText("Qtd: 1")).toBeInTheDocument();
-    expect(screen.queryByText(/duplicata/)).not.toBeInTheDocument();
-  });
-
-  it("marks it as a duplicate when quantity is greater than 1", () => {
-    renderWithIntl(<CardTile card={card({ quantity: 3 })} onMutate={vi.fn()} onEnlarge={vi.fn()} />);
-    expect(screen.getByText(/Qtd: 3/)).toHaveTextContent("· duplicata");
   });
 
   it("hides the in-deck count when allocatedInDecks is 0", () => {

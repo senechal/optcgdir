@@ -4,7 +4,13 @@
 // sobras viram cartas de troca). Requer que o elemento pai tenha
 // `position: relative` — este componente só se posiciona `absolute` dentro
 // dele, sem afetar o layout do resto do card.
+//
+// Líder é um caso especial: um deck só usa 1 cópia do líder (não 4 como as
+// outras cartas), então o playset completo dele é 1 pra coleção + 1 pra
+// jogar = 2 — sem a faixa amarela intermediária, que não faz sentido
+// quando só há um passo entre "tenho uma" e "tenho o playset".
 const PLAYSET_COMPLETE_QUANTITY = 5;
+const LEADER_PLAYSET_COMPLETE_QUANTITY = 2;
 
 type Size = "md" | "sm";
 
@@ -17,29 +23,31 @@ const SIZES: Record<
     plus: number;
     plusRight: number;
     plusBottom: number;
-    font: number;
   }
 > = {
-  md: { circle: 22, border: 2, offset: -6, plus: 16, plusRight: -8, plusBottom: -6, font: 15 },
-  sm: { circle: 14, border: 1, offset: -3, plus: 10, plusRight: -5, plusBottom: -4, font: 10 },
+  md: { circle: 22, border: 2, offset: -6, plus: 16, plusRight: -8, plusBottom: -6 },
+  sm: { circle: 14, border: 1, offset: -3, plus: 10, plusRight: -5, plusBottom: -4 },
 };
 
 export default function CollectionStatusBadge({
   quantity,
+  cardType,
   size = "md",
 }: {
   quantity: number;
+  cardType: string;
   size?: Size;
 }) {
   if (quantity <= 0) return null;
 
+  const completeAt = cardType === "Leader" ? LEADER_PLAYSET_COMPLETE_QUANTITY : PLAYSET_COMPLETE_QUANTITY;
   const color =
     quantity === 1
       ? "var(--color-accent)"
-      : quantity < PLAYSET_COMPLETE_QUANTITY
+      : quantity < completeAt
         ? "var(--color-warning)"
         : "var(--color-success)";
-  const hasExtra = quantity > PLAYSET_COMPLETE_QUANTITY;
+  const hasExtra = quantity > completeAt;
   const s = SIZES[size];
 
   return (
@@ -57,27 +65,16 @@ export default function CollectionStatusBadge({
       }}
     >
       {hasExtra && (
-        <span
-          style={{
-            position: "absolute",
-            right: s.plusRight,
-            bottom: s.plusBottom,
-            width: s.plus,
-            height: s.plus,
-            borderRadius: "50%",
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border-strong)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: s.font,
-            fontWeight: 500,
-            color: "var(--color-text-secondary)",
-            lineHeight: 1,
-          }}
+        <svg
+          data-testid="collection-status-badge-plus"
+          width={s.plus}
+          height={s.plus}
+          viewBox="0 0 24 24"
+          style={{ position: "absolute", right: s.plusRight, bottom: s.plusBottom }}
         >
-          +
-        </span>
+          <circle cx="12" cy="12" r="11" fill="var(--color-surface)" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+          <path d="M12 6v12M6 12h12" stroke="var(--color-text-secondary)" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
       )}
     </div>
   );

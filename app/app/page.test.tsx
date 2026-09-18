@@ -114,11 +114,37 @@ describe("Home (page.tsx)", () => {
     expect(mainCall[0].where).toEqual({ isParallel: true });
   });
 
-  it("excludes alt art cards by name when hideAltArt is set", async () => {
+  it("excludes alt art/parallel/SPR/manga cards by name when hideAltArt is set", async () => {
     await homeProps({ hideAltArt: "1" });
     const mainCall = findMany.mock.calls.find((c) => c[0]?.where !== undefined);
     expect(mainCall[0].where).toEqual({
-      NOT: { cardName: { contains: "Alternate Art", mode: "insensitive" } },
+      NOT: [
+        { cardName: { contains: "Alternate Art", mode: "insensitive" } },
+        { cardName: { contains: "Parallel", mode: "insensitive" } },
+        { cardName: { contains: "SPR", mode: "insensitive" } },
+        { cardName: { contains: "Manga", mode: "insensitive" } },
+      ],
+    });
+  });
+
+  it("computes setOwnershipStats from the full catalog, not the currently filtered card list", async () => {
+    findMany.mockImplementation((args: any) => {
+      if (args?.distinct) return Promise.resolve([]);
+      if (args?.select) {
+        return Promise.resolve([
+          { setId: "OP-01", cardName: "Luffy", collectionItems: [{ quantity: 1 }] },
+          { setId: "OP-01", cardName: "Luffy (Alternate Art)", collectionItems: [] },
+          { setId: "OP-01", cardName: "Zoro", collectionItems: [] },
+        ]);
+      }
+      // Query principal (filtrada): só 1 carta bate no filtro ativo.
+      return Promise.resolve([rawCard({ cardImageId: "only-match" })]);
+    });
+
+    const props = await homeProps({ color: "Red" });
+    expect(props.cards).toHaveLength(1);
+    expect(props.setOwnershipStats).toEqual({
+      "OP-01": { baseOwned: 1, baseTotal: 2, fullOwned: 1, fullTotal: 3 },
     });
   });
 

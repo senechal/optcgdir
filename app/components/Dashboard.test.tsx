@@ -45,6 +45,7 @@ function renderDashboard(overrides: Partial<Parameters<typeof Dashboard>[0]> = {
     <Dashboard
       cards={[card()]}
       filterOptions={filterOptions}
+      setOwnershipStats={{}}
       currentParams={{}}
       view="grid"
       tab="all"
@@ -111,11 +112,8 @@ describe("Dashboard", () => {
   it("shows the set name and BS/FS ownership pills in the 'grouped' tab, marking complete ones green", () => {
     const { container } = renderDashboard({
       tab: "grouped",
-      cards: [
-        card({ cardImageId: "A", setId: "OP-01", cardName: "Luffy", quantity: 1 }),
-        card({ cardImageId: "B", setId: "OP-01", cardName: "Luffy (Alternate Art)", quantity: 1 }),
-        card({ cardImageId: "C", setId: "OP-01", cardName: "Zoro", quantity: 0 }),
-      ],
+      cards: [card({ cardImageId: "A", setId: "OP-01" })],
+      setOwnershipStats: { "OP-01": { baseOwned: 1, baseTotal: 2, fullOwned: 2, fullTotal: 3 } },
     });
     expect(screen.getByText("Romance Dawn")).toBeInTheDocument();
     expect(screen.getByText("BS: 1/2")).toBeInTheDocument();
@@ -126,11 +124,27 @@ describe("Dashboard", () => {
   it("marks a BS/FS pill green once its ratio reaches 100%", () => {
     const { container } = renderDashboard({
       tab: "grouped",
-      cards: [card({ cardImageId: "A", setId: "OP-01", cardName: "Luffy", quantity: 1 })],
+      cards: [card({ cardImageId: "A", setId: "OP-01" })],
+      setOwnershipStats: { "OP-01": { baseOwned: 1, baseTotal: 1, fullOwned: 1, fullTotal: 1 } },
     });
     expect(screen.getByText("BS: 1/1")).toHaveClass("complete");
     expect(screen.getByText("FS: 1/1")).toHaveClass("complete");
     expect(container.querySelectorAll(".set-stat-pill.complete")).toHaveLength(2);
+  });
+
+  it("keeps set ownership pills as given by the server, regardless of the currently filtered card list", () => {
+    // A lista de cards pode estar reduzida por um filtro ativo (ex: só 1
+    // carta batendo na busca), mas o progresso de coleção do set (BS/FS)
+    // reflete a coleção inteira, vinda pronta do servidor — não deve ser
+    // recalculado a partir dessa lista já filtrada.
+    renderDashboard({
+      tab: "grouped",
+      cards: [card({ cardImageId: "A", setId: "OP-01" })],
+      currentParams: { color: "Red" },
+      setOwnershipStats: { "OP-01": { baseOwned: 40, baseTotal: 60, fullOwned: 45, fullTotal: 80 } },
+    });
+    expect(screen.getByText("BS: 40/60")).toBeInTheDocument();
+    expect(screen.getByText("FS: 45/80")).toBeInTheDocument();
   });
 
   it("does not show group headers in the 'all' tab", () => {

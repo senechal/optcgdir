@@ -18,13 +18,16 @@ export function cardmarketUrl(card: CardWithCollectionInfo): string {
 }
 
 // "Alt art" não é um campo próprio no catálogo — é uma variante marcada no
-// próprio card_name (ex: "Kouzuki Oden (Alternate Art)"). Constante
-// compartilhada com o filtro "Ocultar alt arts" (app/app/page.tsx) pra não
-// duplicar o texto em dois lugares.
-export const ALT_ART_MARKER = "Alternate Art";
+// próprio card_name (ex: "Kouzuki Oden (Alternate Art)", "Jack (Parallel)",
+// "Kouzuki Oden (SPR)", "Borsalino (Manga)"). Parallel/SPR/Manga contam como
+// alt art neste sistema, não só "Alternate Art" em si. Lista compartilhada
+// com o filtro "Ocultar alt arts" (app/app/page.tsx) pra não duplicar os
+// textos em dois lugares.
+export const ALT_ART_MARKERS = ["Alternate Art", "Parallel", "SPR", "Manga"];
 
 export function isAltArt(cardName: string): boolean {
-  return cardName.toLowerCase().includes(ALT_ART_MARKER.toLowerCase());
+  const lowerName = cardName.toLowerCase();
+  return ALT_ART_MARKERS.some((marker) => lowerName.includes(marker.toLowerCase()));
 }
 
 export type SetOwnershipStats = {
@@ -37,7 +40,9 @@ export type SetOwnershipStats = {
 // "Base set" (BS) conta só as cartas sem alt art; "full set" (FS) conta
 // todas, alt art incluída — usado na aba "Por Set" pra mostrar quanto da
 // coleção de cada set o usuário já tem.
-export function computeSetOwnershipStats(cards: CardWithCollectionInfo[]): SetOwnershipStats {
+export function computeSetOwnershipStats(
+  cards: Pick<CardWithCollectionInfo, "cardName" | "quantity">[]
+): SetOwnershipStats {
   let baseOwned = 0;
   let baseTotal = 0;
   let fullOwned = 0;

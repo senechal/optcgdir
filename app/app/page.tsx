@@ -2,7 +2,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "../lib/prisma";
 import { getDefaultUserId } from "../lib/currentUser";
 import Dashboard from "../components/Dashboard";
-import { ALT_ART_MARKER } from "../lib/cardDisplay";
+import { ALT_ART_MARKERS, computeSetOwnershipStats } from "../lib/cardDisplay";
+import type { SetOwnershipStats } from "../lib/cardDisplay";
 import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 import packageJson from "../package.json";
 import type { Locale } from "../i18n/request";
@@ -81,9 +82,12 @@ export default async function Home({
   if (onlyWithCounter) where.counterAmount = { not: null };
   if (hideV1) where.isParallel = true;
   // "Alt art" não é um campo próprio no catálogo — é uma variante marcada
-  // no próprio nome (ex: "Kouzuki Oden (Alternate Art)"), então o filtro
-  // é por texto mesmo.
-  if (hideAltArt) where.NOT = { cardName: { contains: ALT_ART_MARKER, mode: "insensitive" } };
+  // no próprio nome (ex: "Kouzuki Oden (Alternate Art)"), então o filtro é
+  // por texto mesmo. NOT como array = AND das negações (De Morgan): exclui
+  // quem bate em QUALQUER uma das marcas (Alternate Art/Parallel/SPR/Manga).
+  if (hideAltArt) {
+    where.NOT = ALT_ART_MARKERS.map((marker) => ({ cardName: { contains: marker, mode: "insensitive" } }));
+  }
   if (search) {
     where.OR = [
       { cardName: { contains: search, mode: "insensitive" } },
@@ -93,7 +97,7 @@ export default async function Home({
     ];
   }
 
-  const [rawCards, sets, rarityRows, typeRows] = await Promise.all([
+  const [rawCards, sets, rarityRows, typeRows, allCardsForStats] = await Promise.all([
     prisma.card.findMany({
       where,
       include: {
@@ -104,6 +108,11 @@ export default async function Home({
     prisma.set.findMany({ orderBy: { id: "asc" } }),
     prisma.card.findMany({ distinct: ["rarity"], select: { rarity: true } }),
     prisma.card.findMany({ distinct: ["cardType"], select: { cardType: true } }),
+    // Sem `where`: o progresso da coleção (BS/FS) por set é sobre a coleção
+    // inteira, não sobre o resultado filtrado/buscado atual.
+    prisma.card.findMany({
+      select: { setId: true, cardName: true, collectionItems: { where: { userId }, select: { quantity: true } } },
+    }),
   ]);
 
   // Achata pra um formato simples e calcula quantidade/alocação/quero-trocar
@@ -163,6 +172,20 @@ export default async function Home({
     cards.sort(activeSorter);
   }
 
+  // Agrupa por set pra computar BS/FS de cada um a partir do catálogo
+  // completo (allCardsForStats), não da lista já filtrada/buscada (cards).
+  const cardsBySetForStats = allCardsForStats.reduce<Record<string, { cardName: string; quantity: number }[]>>(
+    (acc, c: any) => {
+      const quantity = c.collectionItems.reduce((sum: number, ci: any) => sum + ci.quantity, 0);
+      (acc[c.setId] ||= []).push({ cardName: c.cardName, quantity });
+      return acc;
+    },
+    {}
+  );
+  const setOwnershipStats: Record<string, SetOwnershipStats> = Object.fromEntries(
+    Object.entries(cardsBySetForStats).map(([setKey, setCards]) => [setKey, computeSetOwnershipStats(setCards)])
+  );
+
   const filterOptions = {
     sets: sets.map((s: any) => ({ id: s.id, name: s.name })),
     colors: COLORS,
@@ -180,6 +203,7 @@ export default async function Home({
     <Dashboard
       cards={cards}
       filterOptions={filterOptions}
+      setOwnershipStats={setOwnershipStats}
       currentParams={currentParamsRecord}
       view={view}
       tab={tab}

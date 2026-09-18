@@ -14,11 +14,12 @@ import CardRow from "./CardRow";
 import CardImageModal from "./CardImageModal";
 import type { Locale } from "../i18n/request";
 import type { CardWithCollectionInfo, FilterOptions, DraftFilters, Tab } from "../lib/dashboardTypes";
-import { computeSetOwnershipStats } from "../lib/cardDisplay";
+import type { SetOwnershipStats } from "../lib/cardDisplay";
 
 export default function Dashboard({
   cards,
   filterOptions,
+  setOwnershipStats,
   currentParams,
   view,
   tab,
@@ -27,6 +28,7 @@ export default function Dashboard({
 }: {
   cards: CardWithCollectionInfo[];
   filterOptions: FilterOptions;
+  setOwnershipStats: Record<string, SetOwnershipStats>;
   currentParams: Record<string, string>;
   view: "grid" | "list";
   tab: Tab;
@@ -266,10 +268,10 @@ export default function Dashboard({
       )}
 
       {groupedEntries.map(([groupName, groupCards]) => {
-        const setStats = groupBySet ? computeSetOwnershipStats(groupCards) : null;
+        const setStats = groupBySet ? setOwnershipStats[groupName] : null;
         return (
           <section key={groupName} style={{ marginBottom: 32 }}>
-            {groupBySet && setStats && (
+            {groupBySet && (
               <div style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: 8, marginBottom: 8 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <h2 style={{ margin: 0 }}>{groupName}</h2>
@@ -277,14 +279,16 @@ export default function Dashboard({
                     {filterOptions.sets.find((s) => s.id === groupName)?.name}
                   </span>
                 </div>
-                <div className="set-stats-pills">
-                  <span className={`set-stat-pill ${setStats.baseOwned === setStats.baseTotal ? "complete" : ""}`}>
-                    {t("baseSetStat", { owned: setStats.baseOwned, total: setStats.baseTotal })}
-                  </span>
-                  <span className={`set-stat-pill ${setStats.fullOwned === setStats.fullTotal ? "complete" : ""}`}>
-                    {t("fullSetStat", { owned: setStats.fullOwned, total: setStats.fullTotal })}
-                  </span>
-                </div>
+                {setStats && (
+                  <div className="set-stats-pills">
+                    <span className={`set-stat-pill ${setStats.baseOwned === setStats.baseTotal ? "complete" : ""}`}>
+                      {t("baseSetStat", { owned: setStats.baseOwned, total: setStats.baseTotal })}
+                    </span>
+                    <span className={`set-stat-pill ${setStats.fullOwned === setStats.fullTotal ? "complete" : ""}`}>
+                      {t("fullSetStat", { owned: setStats.fullOwned, total: setStats.fullTotal })}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 

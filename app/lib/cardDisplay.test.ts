@@ -67,8 +67,20 @@ describe("cardmarketUrl", () => {
 });
 
 describe("isAltArt", () => {
-  it("returns true when the name contains the alt-art marker", () => {
+  it("returns true when the name contains 'Alternate Art'", () => {
     expect(isAltArt("Kouzuki Oden (Alternate Art)")).toBe(true);
+  });
+
+  it("returns true when the name contains 'Parallel'", () => {
+    expect(isAltArt("Jack (Parallel)")).toBe(true);
+  });
+
+  it("returns true when the name contains 'SPR'", () => {
+    expect(isAltArt("Kouzuki Oden (SPR)")).toBe(true);
+  });
+
+  it("returns true when the name contains 'Manga'", () => {
+    expect(isAltArt("Borsalino (Manga)")).toBe(true);
   });
 
   it("matches case-insensitively", () => {

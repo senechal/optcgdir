@@ -1,9 +1,9 @@
-"""Pré-processamento (OpenCV) + OCR (PaddleOCR, com Tesseract como fallback) de uma foto de carta."""
+"""Pré-processamento (OpenCV) + OCR (RapidOCR sobre ONNX Runtime, com Tesseract como fallback) de uma foto de carta."""
 
 import cv2
 import numpy as np
 import pytesseract
-from paddleocr import PaddleOCR
+from rapidocr import RapidOCR
 
 # Card real: proporção 63mm x 88mm (mesma da maioria dos TCGs).
 CARD_ASPECT_RATIO = 63 / 88
@@ -55,11 +55,17 @@ def _aspect_ratio_score(contour: np.ndarray) -> float:
 # latência do carregamento do modelo quanto duplicar a memória dos pesos em
 # cada worker (compartilhada via copy-on-write depois do fork).
 # Comparado ao Tesseract (ver ocr_code_recognition_limitation na memória do
-# projeto): testado contra fotos reais categorizadas, o PaddleOCR lê o
-# código impresso e o nome da carta com confiança alta mesmo em condições
-# ruins (carta dentro de slab), sem precisar isolar/ampliar cantos como o
-# pipeline antigo baseado em Tesseract exigia.
-_paddle_ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
+# projeto): testado contra fotos reais categorizadas, lê o código impresso
+# e o nome da carta com confiança alta mesmo em condições ruins (carta
+# dentro de slab), sem precisar isolar/ampliar cantos como o pipeline
+# antigo baseado em Tesseract exigia. Usa RapidOCR (modelos PP-OCR
+# convertidos pra ONNX) em vez do pacote paddleocr/paddlepaddle direto:
+# testamos paddleocr primeiro, mas o paddlepaddle é compilado assumindo
+# AVX disponível e trava com "illegal instruction" na CPU de produção
+# (Intel Celeron N3450, Apollo Lake — não tem nem AVX1). O ONNX Runtime
+# faz dispatch de instrução em tempo de execução e roda em qualquer CPU
+# x86_64, incluindo essa.
+_rapid_ocr = RapidOCR()
 
 
 def _order_points(pts: np.ndarray) -> np.ndarray:
@@ -146,16 +152,18 @@ def _straighten(image: np.ndarray, quad: np.ndarray) -> np.ndarray:
     return cv2.warpPerspective(image, matrix, (STRAIGHTENED_WIDTH, STRAIGHTENED_HEIGHT))
 
 
-def _paddle_lines(image_bgr: np.ndarray) -> list[str]:
-    result = _paddle_ocr.ocr(image_bgr, cls=True)
-    lines = result[0] if result and isinstance(result[0], list) else (result or [])
-    # PaddleOCR já detecta e recorta cada linha de texto sozinho (é o que o
+def _rapid_lines(image_bgr: np.ndarray) -> list[str]:
+    result = _rapid_ocr(image_bgr)
+    if not result or not result.txts:
+        return []
+    # RapidOCR já detecta e recorta cada linha de texto sozinho (é o que o
     # torna melhor que o Tesseract pra fonte pequena/densa do rodapé da
     # carta) — não precisamos mais isolar/ampliar cantos na mão. Ordena de
-    # cima pra baixo só pra manter a saída legível/estável; cardMatch.ts já
-    # compara contra cada linha independente da ordem.
-    ordered = sorted(lines, key=lambda line: line[0][0][1])
-    return [text for _, (text, _confidence) in ordered]
+    # cima pra baixo (primeiro ponto de cada box, eixo Y) só pra manter a
+    # saída legível/estável; cardMatch.ts já compara contra cada linha
+    # independente da ordem.
+    ordered = sorted(zip(result.boxes, result.txts), key=lambda pair: pair[0][0][1])
+    return [text for _, text in ordered]
 
 
 def extract_text(image_path: str) -> str:
@@ -172,13 +180,13 @@ def extract_text(image_path: str) -> str:
     target = _straighten(image, quad) if quad is not None else image
 
     try:
-        lines = _paddle_lines(target)
+        lines = _rapid_lines(target)
         if lines:
             return "\n".join(lines)
     except Exception:  # noqa: BLE001 - fallback deliberado, ver comentário abaixo
         pass
 
-    # PaddleOCR falhando (ou não achando nenhuma linha) não pode derrubar o
+    # RapidOCR falhando (ou não achando nenhuma linha) não pode derrubar o
     # scan inteiro — cai pro Tesseract, mais fraco mas confiável, em vez de
     # devolver erro pro usuário.
     target_gray = cv2.cvtColor(target, cv2.COLOR_BGR2GRAY)

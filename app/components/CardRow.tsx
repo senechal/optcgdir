@@ -32,7 +32,7 @@ export default function CardRow({
           >
             <div className="row-thumb" style={{ position: "relative" }}>
               <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
-              <CollectionStatusBadge quantity={card.quantity} size="sm" />
+              <CollectionStatusBadge quantity={card.quantity} cardType={card.cardType} size="sm" />
             </div>
           </button>
         ) : (
@@ -40,7 +40,7 @@ export default function CardRow({
             className="row-thumb"
             style={{ position: "relative", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }}
           >
-            <CollectionStatusBadge quantity={card.quantity} size="sm" />
+            <CollectionStatusBadge quantity={card.quantity} cardType={card.cardType} size="sm" />
           </div>
         )}
       </td>
@@ -59,10 +59,7 @@ export default function CardRow({
       <td className="col-rarity hide-mobile">{card.rarity}</td>
       <td className="col-cost hide-mobile">{card.cardCost ?? "-"}</td>
       <td className="col-power hide-mobile">{card.cardPower ?? "-"}</td>
-      <td className="col-qty hide-mobile">
-        {card.quantity}
-        {card.quantity > 1 ? t("duplicateSuffixShort") : ""}
-      </td>
+      <td className="col-qty hide-mobile">{card.quantity}</td>
       <td className="col-indeck hide-mobile">{card.allocatedInDecks > 0 ? card.allocatedInDecks : "-"}</td>
       <td className="col-actions">
         <button className="icon-btn" onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>

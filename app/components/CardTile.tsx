@@ -37,18 +37,13 @@ export default function CardTile({
         ) : (
           <div style={{ aspectRatio: "63 / 88", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }} />
         )}
-        <CollectionStatusBadge quantity={card.quantity} />
+        <CollectionStatusBadge quantity={card.quantity} cardType={card.cardType} />
       </div>
       <div style={{ fontSize: 12, marginTop: 8, fontWeight: 600 }}>{card.cardName}</div>
       <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{card.cardSetId}</div>
 
       <div style={{ fontSize: 11, minHeight: 14, marginTop: 2, color: "var(--color-text-secondary)" }}>
-        {card.quantity > 0 && (
-          <span>
-            {t("quantityLabel", { count: card.quantity })}
-            {card.quantity > 1 && t("duplicateSuffixFull")}
-          </span>
-        )}
+        {card.quantity > 0 && <span>{t("quantityLabel", { count: card.quantity })}</span>}
       </div>
       {card.allocatedInDecks > 0 && (
         <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>

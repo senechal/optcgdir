@@ -72,15 +72,9 @@ describe("CardRow", () => {
     expect(container.querySelector(".col-indeck")).toHaveTextContent("3");
   });
 
-  it("doesn't append a duplicate marker when quantity is 1 or less", () => {
-    const { container } = renderRow(card({ quantity: 1 }));
-    expect(container.querySelector(".col-qty")).toHaveTextContent("1");
-    expect(container.querySelector(".col-qty")).not.toHaveTextContent("dup");
-  });
-
-  it("appends the short duplicate marker when quantity is greater than 1", () => {
+  it("shows the raw quantity in the col-qty column", () => {
     const { container } = renderRow(card({ quantity: 2 }));
-    expect(container.querySelector(".col-qty")).toHaveTextContent("2 · dup");
+    expect(container.querySelector(".col-qty")).toHaveTextContent("2");
   });
 
   it("shows the quantity inline in row-meta only when owned", () => {

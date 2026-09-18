@@ -70,8 +70,6 @@
     "removeFilter": "Remove filter: {filter}",
     "viewLargerImage": "View larger image",
     "quantityLabel": "Qty: {count}",
-    "duplicateSuffixFull": " · duplicate",
-    "duplicateSuffixShort": " · dup",
     "inDeckCount": "{count, plural, one {# in a deck} other {# in decks}}",
     "removeOne": "Remove 1",
     "addOne": "Add 1",

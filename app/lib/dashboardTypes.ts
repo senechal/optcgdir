@@ -35,6 +35,8 @@ export type DraftFilters = {
   powerMax: string;
   inDeck: boolean;
   counter: boolean;
+  hideAltArt: boolean;
+  hideV1: boolean;
 };
 
 export type Tab = "all" | "grouped" | "owned" | "duplicates" | "wantsTrade";

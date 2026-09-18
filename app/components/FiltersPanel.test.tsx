@@ -24,6 +24,8 @@ function draft(overrides: Partial<DraftFilters> = {}): DraftFilters {
     powerMax: "",
     inDeck: false,
     counter: false,
+    hideAltArt: false,
+    hideV1: false,
     ...overrides,
   };
 }
@@ -90,6 +92,19 @@ describe("FiltersPanel", () => {
 
     fireEvent.click(inDeckBox);
     expect(inDeckBox.checked).toBe(false);
+  });
+
+  it("toggles the hideAltArt and hideV1 checkboxes", () => {
+    renderWithIntl(<StatefulFiltersPanel />);
+    const hideAltArtBox = screen.getByLabelText("Ocultar alt arts") as HTMLInputElement;
+    const hideV1Box = screen.getByLabelText("Ocultar V.1") as HTMLInputElement;
+
+    fireEvent.click(hideAltArtBox);
+    expect(hideAltArtBox.checked).toBe(true);
+    expect(hideV1Box.checked).toBe(false);
+
+    fireEvent.click(hideV1Box);
+    expect(hideV1Box.checked).toBe(true);
   });
 
   it("calls onApply when the apply button is clicked", () => {

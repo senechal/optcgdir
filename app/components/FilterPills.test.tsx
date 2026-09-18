@@ -57,10 +57,16 @@ describe("FilterPills", () => {
 
   it("only shows the boolean-flag pills when their value is exactly '1'", () => {
     renderWithIntl(
-      <FilterPills currentParams={{ inDeck: "0", counter: "1" }} filterOptions={filterOptions} onRemove={vi.fn()} />
+      <FilterPills
+        currentParams={{ inDeck: "0", counter: "1", hideAltArt: "1", hideV1: "0" }}
+        filterOptions={filterOptions}
+        onRemove={vi.fn()}
+      />
     );
     expect(screen.queryByText("Só em algum deck")).not.toBeInTheDocument();
     expect(screen.getByText("Só com counter")).toBeInTheDocument();
+    expect(screen.getByText("Ocultar alt arts")).toBeInTheDocument();
+    expect(screen.queryByText("Ocultar V.1")).not.toBeInTheDocument();
   });
 
   it("calls onRemove with the pill's key when its remove button is clicked", () => {

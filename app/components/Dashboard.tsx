@@ -58,6 +58,8 @@ export default function Dashboard({
     currentParams.powerMax,
     currentParams.inDeck,
     currentParams.counter,
+    currentParams.hideAltArt,
+    currentParams.hideV1,
   ].filter(Boolean).length;
 
   function updateParams(patch: Record<string, string | null>) {
@@ -95,6 +97,8 @@ export default function Dashboard({
       powerMax: params.powerMax || "",
       inDeck: params.inDeck === "1",
       counter: params.counter === "1",
+      hideAltArt: params.hideAltArt === "1",
+      hideV1: params.hideV1 === "1",
     };
   }
 
@@ -118,6 +122,8 @@ export default function Dashboard({
     currentParams.powerMax,
     currentParams.inDeck,
     currentParams.counter,
+    currentParams.hideAltArt,
+    currentParams.hideV1,
   ]);
 
   function applyDraftFilters() {
@@ -132,6 +138,8 @@ export default function Dashboard({
       powerMax: draftFilters.powerMax || null,
       inDeck: draftFilters.inDeck ? "1" : null,
       counter: draftFilters.counter ? "1" : null,
+      hideAltArt: draftFilters.hideAltArt ? "1" : null,
+      hideV1: draftFilters.hideV1 ? "1" : null,
     });
     setFiltersOpen(false);
   }
@@ -239,15 +247,21 @@ export default function Dashboard({
         </div>
 
         <FilterPills currentParams={currentParams} filterOptions={filterOptions} onRemove={(key) => updateParam(key, null)} />
+
+        {filtersOpen && (
+          <FiltersPanel
+            draftFilters={draftFilters}
+            setDraftFilters={setDraftFilters}
+            filterOptions={filterOptions}
+            onApply={applyDraftFilters}
+          />
+        )}
       </div>
 
-      {filtersOpen && (
-        <FiltersPanel
-          draftFilters={draftFilters}
-          setDraftFilters={setDraftFilters}
-          filterOptions={filterOptions}
-          onApply={applyDraftFilters}
-        />
+      {activeFilterCount > 0 && (
+        <p style={{ color: "var(--color-text-secondary)", marginTop: 0, marginBottom: "var(--space-3)" }}>
+          {t("cardsFound", { count: cards.length })}
+        </p>
       )}
 
       {groupedEntries.map(([groupName, groupCards]) => (

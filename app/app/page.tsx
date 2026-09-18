@@ -48,6 +48,8 @@ export default async function Home({
   const search = first(searchParams.search)?.trim();
   const onlyWithCounter = first(searchParams.counter) === "1";
   const onlyInDeck = first(searchParams.inDeck) === "1";
+  const hideAltArt = first(searchParams.hideAltArt) === "1";
+  const hideV1 = first(searchParams.hideV1) === "1";
   const costMin = first(searchParams.costMin);
   const costMax = first(searchParams.costMax);
   const powerMin = first(searchParams.powerMin);
@@ -76,6 +78,11 @@ export default async function Home({
   if (type) where.cardType = type;
   if (setId) where.setId = setId;
   if (onlyWithCounter) where.counterAmount = { not: null };
+  if (hideV1) where.isParallel = true;
+  // "Alt art" não é um campo próprio no catálogo — é uma variante marcada
+  // no próprio nome (ex: "Kouzuki Oden (Alternate Art)"), então o filtro
+  // é por texto mesmo.
+  if (hideAltArt) where.NOT = { cardName: { contains: "Alternate Art", mode: "insensitive" } };
   if (search) {
     where.OR = [
       { cardName: { contains: search, mode: "insensitive" } },

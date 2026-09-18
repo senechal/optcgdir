@@ -69,6 +69,19 @@ describe("Dashboard", () => {
     expect(screen.getByText("2 cartas encontradas")).toBeInTheDocument();
   });
 
+  it("doesn't repeat the card count above the list when no filter is active", () => {
+    renderDashboard({ cards: [card(), card({ cardImageId: "OP01-002" })] });
+    expect(screen.getAllByText("2 cartas encontradas")).toHaveLength(1);
+  });
+
+  it("repeats the card count above the list when a filter is active", () => {
+    renderDashboard({
+      cards: [card(), card({ cardImageId: "OP01-002" })],
+      currentParams: { color: "Red" },
+    });
+    expect(screen.getAllByText("2 cartas encontradas")).toHaveLength(2);
+  });
+
   it("shows the empty-state message when there are no cards", () => {
     renderDashboard({ cards: [] });
     expect(screen.getByText("Nenhuma carta encontrada com esses filtros.")).toBeInTheDocument();

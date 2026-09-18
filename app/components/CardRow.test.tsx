@@ -88,6 +88,20 @@ describe("CardRow", () => {
     expect(container.querySelector(".row-meta")).not.toHaveTextContent("Qtd:");
   });
 
+  it("shows the collection status badge (small size) only when quantity is greater than 0", () => {
+    const { container, rerender } = renderRow(card({ quantity: 0 }));
+    expect(container.querySelector('[data-testid="collection-status-badge"]')).not.toBeInTheDocument();
+
+    rerender(
+      <table>
+        <tbody>
+          <CardRow card={card({ quantity: 2 })} onMutate={vi.fn()} onEnlarge={vi.fn()} />
+        </tbody>
+      </table>
+    );
+    expect(container.querySelector('[data-testid="collection-status-badge"]')).toBeInTheDocument();
+  });
+
   it("calls onMutate with the right action per icon button", () => {
     const onMutate = vi.fn();
     renderRow(card({ cardImageId: "ROW-1" }), onMutate);

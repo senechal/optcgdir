@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import CardImage from "./CardImage";
+import CollectionStatusBadge from "./CollectionStatusBadge";
 import { cardmarketUrl } from "../lib/cardDisplay";
 import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 
@@ -18,23 +19,26 @@ export default function CardTile({
 
   return (
     <div className="card-tile">
-      {card.localImagePath ? (
-        <button
-          type="button"
-          onClick={() => onEnlarge(card)}
-          title={t("viewLargerImage")}
-          style={{
-            all: "unset",
-            display: "block",
-            width: "100%",
-            cursor: "pointer",
-          }}
-        >
-          <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
-        </button>
-      ) : (
-        <div style={{ aspectRatio: "63 / 88", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }} />
-      )}
+      <div style={{ position: "relative" }}>
+        {card.localImagePath ? (
+          <button
+            type="button"
+            onClick={() => onEnlarge(card)}
+            title={t("viewLargerImage")}
+            style={{
+              all: "unset",
+              display: "block",
+              width: "100%",
+              cursor: "pointer",
+            }}
+          >
+            <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
+          </button>
+        ) : (
+          <div style={{ aspectRatio: "63 / 88", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }} />
+        )}
+        <CollectionStatusBadge quantity={card.quantity} />
+      </div>
       <div style={{ fontSize: 12, marginTop: 8, fontWeight: 600 }}>{card.cardName}</div>
       <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{card.cardSetId}</div>
 

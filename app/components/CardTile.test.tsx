@@ -91,6 +91,14 @@ describe("CardTile", () => {
     expect(onMutate).toHaveBeenNthCalledWith(3, "XYZ-1", "toggleWantsTrade");
   });
 
+  it("shows the collection status badge only when quantity is greater than 0", () => {
+    const { rerender } = renderWithIntl(<CardTile card={card({ quantity: 0 })} onMutate={vi.fn()} onEnlarge={vi.fn()} />);
+    expect(screen.queryByTestId("collection-status-badge")).not.toBeInTheDocument();
+
+    rerender(<CardTile card={card({ quantity: 3 })} onMutate={vi.fn()} onEnlarge={vi.fn()} />);
+    expect(screen.getByTestId("collection-status-badge")).toBeInTheDocument();
+  });
+
   it("links to Cardmarket with the search string built from the card's data", () => {
     const c = card({ cardName: "Nami (Parallel)", cardSetId: "OP15-086", isParallel: true });
     renderWithIntl(<CardTile card={c} onMutate={vi.fn()} onEnlarge={vi.fn()} />);

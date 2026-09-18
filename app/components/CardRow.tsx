@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import CardImage from "./CardImage";
+import CollectionStatusBadge from "./CollectionStatusBadge";
 import { cardmarketUrl } from "../lib/cardDisplay";
 import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 
@@ -29,12 +30,18 @@ export default function CardRow({
             title={t("viewLargerImage")}
             style={{ all: "unset", display: "block", cursor: "pointer" }}
           >
-            <div className="row-thumb">
+            <div className="row-thumb" style={{ position: "relative" }}>
               <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
+              <CollectionStatusBadge quantity={card.quantity} size="sm" />
             </div>
           </button>
         ) : (
-          <div className="row-thumb" style={{ background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }} />
+          <div
+            className="row-thumb"
+            style={{ position: "relative", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }}
+          >
+            <CollectionStatusBadge quantity={card.quantity} size="sm" />
+          </div>
         )}
       </td>
       <td className="col-name">

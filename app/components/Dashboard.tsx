@@ -8,6 +8,7 @@ import TabsBar from "./TabsBar";
 import FilterPills from "./FilterPills";
 import FiltersPanel from "./FiltersPanel";
 import ScanButton from "./ScanButton";
+import Toast from "./Toast";
 import CardTile from "./CardTile";
 import CardRow from "./CardRow";
 import CardImageModal from "./CardImageModal";
@@ -160,6 +161,12 @@ export default function Dashboard({
 
   return (
     <div className="dashboard-container">
+      {(scanNotice || scanError) && (
+        <div className="toast-container">
+          {scanNotice && <Toast message={scanNotice} variant="success" onDismiss={() => setScanNotice(null)} />}
+          {scanError && <Toast message={scanError} variant="error" onDismiss={() => setScanError(null)} />}
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <h1 style={{ marginBottom: 4 }}>{t("title")}</h1>
@@ -200,8 +207,6 @@ export default function Dashboard({
           )}
           <ScanButton onSearchTermReady={handleScanResult} onNotice={setScanNotice} onError={setScanError} />
         </form>
-        {scanNotice && <p style={{ fontSize: 13, color: "var(--color-success)", marginTop: 4, marginBottom: 0 }}>{scanNotice}</p>}
-        {scanError && <p style={{ fontSize: 13, color: "var(--color-danger)", marginTop: 4, marginBottom: 0 }}>{scanError}</p>}
 
         <div className="toolbar-row">
           <select
@@ -309,6 +314,24 @@ export default function Dashboard({
           padding: var(--space-4);
           max-width: 1400px;
           margin: 0 auto;
+        }
+
+        .toast-container {
+          position: fixed;
+          top: var(--space-4);
+          right: var(--space-4);
+          z-index: 1000;
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-2);
+        }
+        @media (max-width: 699px) {
+          .toast-container {
+            top: auto;
+            bottom: var(--space-4);
+            left: var(--space-4);
+            right: var(--space-4);
+          }
         }
         @media (min-width: 900px) {
           .dashboard-container {

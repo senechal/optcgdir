@@ -151,6 +151,26 @@ describe("rankCardsByOcrText", () => {
     expect(unrelated?.matchedByCode ?? false).toBe(false);
   });
 
+  it("strips a catalog disambiguation suffix like \"(060)\" from the name before matching", () => {
+    // Real bug reported by the user: the catalog stores some cards with an
+    // internal disambiguator baked into cardName (e.g. "Sengoku (060)" and
+    // "Sengoku (066)" both exist because two different OP16 cards are
+    // plainly named "Sengoku") -- but the physical card only ever prints
+    // "Sengoku". Comparing the raw suffixed name against the OCR'd line
+    // scored strictly worse than a plain-named sibling would, to the point
+    // the suffixed card could drop out of the candidates list entirely
+    // when no code was read.
+    const cards = [
+      card({ cardImageId: "suffixed", cardSetId: "OP16-060", cardName: "Sengoku (060)" }),
+      card({ cardImageId: "plain", cardSetId: "OP10-031", cardName: "Sengoku" }),
+    ];
+    const result = rankCardsByOcrText("noise\nLEADER\nSengoku\nNavy", cards);
+    expect(result).toHaveLength(2);
+    const suffixed = result.find((c) => c.cardImageId === "suffixed");
+    const plain = result.find((c) => c.cardImageId === "plain");
+    expect(suffixed?.score).toBeCloseTo(plain?.score ?? -1, 5);
+  });
+
   it("defaults the limit to 8 candidates", () => {
     const cards = Array.from({ length: 10 }, (_, i) =>
       card({ cardImageId: `c${i}`, cardSetId: `OP01-0${i}`, cardName: "Nami" })

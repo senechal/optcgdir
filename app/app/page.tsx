@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "../lib/prisma";
 import { getDefaultUserId } from "../lib/currentUser";
 import Dashboard from "../components/Dashboard";
+import { ALT_ART_MARKER } from "../lib/cardDisplay";
 import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 import packageJson from "../package.json";
 import type { Locale } from "../i18n/request";
@@ -82,7 +83,7 @@ export default async function Home({
   // "Alt art" não é um campo próprio no catálogo — é uma variante marcada
   // no próprio nome (ex: "Kouzuki Oden (Alternate Art)"), então o filtro
   // é por texto mesmo.
-  if (hideAltArt) where.NOT = { cardName: { contains: "Alternate Art", mode: "insensitive" } };
+  if (hideAltArt) where.NOT = { cardName: { contains: ALT_ART_MARKER, mode: "insensitive" } };
   if (search) {
     where.OR = [
       { cardName: { contains: search, mode: "insensitive" } },

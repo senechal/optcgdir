@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { stripVariantSuffix, cardmarketUrl } from "./cardDisplay";
+import { stripVariantSuffix, cardmarketUrl, isAltArt, computeSetOwnershipStats } from "./cardDisplay";
 import type { CardWithCollectionInfo } from "./dashboardTypes";
 
 function card(overrides: Partial<CardWithCollectionInfo>): CardWithCollectionInfo {
@@ -63,5 +63,35 @@ describe("cardmarketUrl", () => {
     expect(url).toBe(
       `https://www.cardmarket.com/en/OnePiece/Products/Search?searchString=${encodeURIComponent("Kid & Killer EB01-003 V.1")}`
     );
+  });
+});
+
+describe("isAltArt", () => {
+  it("returns true when the name contains the alt-art marker", () => {
+    expect(isAltArt("Kouzuki Oden (Alternate Art)")).toBe(true);
+  });
+
+  it("matches case-insensitively", () => {
+    expect(isAltArt("Kouzuki Oden (alternate art)")).toBe(true);
+  });
+
+  it("returns false for a plain card name", () => {
+    expect(isAltArt("Monkey.D.Luffy")).toBe(false);
+  });
+});
+
+describe("computeSetOwnershipStats", () => {
+  it("returns all zeros for an empty set", () => {
+    expect(computeSetOwnershipStats([])).toEqual({ baseOwned: 0, baseTotal: 0, fullOwned: 0, fullTotal: 0 });
+  });
+
+  it("counts base set (non-alt-art) and full set (all cards) separately", () => {
+    const cards = [
+      card({ cardImageId: "a", cardName: "Luffy", quantity: 1 }),
+      card({ cardImageId: "b", cardName: "Luffy (Alternate Art)", quantity: 0 }),
+      card({ cardImageId: "c", cardName: "Zoro", quantity: 0 }),
+      card({ cardImageId: "d", cardName: "Zoro (Alternate Art)", quantity: 2 }),
+    ];
+    expect(computeSetOwnershipStats(cards)).toEqual({ baseOwned: 1, baseTotal: 2, fullOwned: 2, fullTotal: 4 });
   });
 });

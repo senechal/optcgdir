@@ -186,28 +186,7 @@ describe("Dashboard", () => {
     await waitFor(() => expect(refresh).toHaveBeenCalledOnce());
   });
 
-  it("shows scan candidates to choose from when the top guess isn't a confident code match", async () => {
-    (fetch as any).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        candidates: [
-          { cardImageId: "A", cardSetId: "OP12-001", cardName: "Nami", matchedByCode: false, localImagePath: null },
-          { cardImageId: "B", cardSetId: "OP12-002", cardName: "Zoro", matchedByCode: false, localImagePath: null },
-        ],
-      }),
-    });
-    renderDashboard();
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(["x"], "card.jpg", { type: "image/jpeg" });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    await waitFor(() => expect(screen.getByText("Selecione a carta correta:")).toBeInTheDocument());
-    expect(screen.getByText("Nami")).toBeInTheDocument();
-    expect(screen.getByText("Zoro")).toBeInTheDocument();
-    expect(push).not.toHaveBeenCalled();
-  });
-
-  it("applies the search term directly, skipping the picker, when the top guess is a confident code match", async () => {
+  it("updates the search box and URL by code when ScanButton reports a code match", async () => {
     (fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -221,45 +200,21 @@ describe("Dashboard", () => {
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/?search=OP12-001"));
     expect(screen.getByPlaceholderText(/Buscar por nome/)).toHaveValue("OP12-001");
-    expect(screen.queryByText("Selecione a carta correta:")).not.toBeInTheDocument();
   });
 
-  it("applies the search term for the candidate the user picks from the scan suggestions", async () => {
+  it("updates the search box and URL by name when ScanButton falls back to a name match", async () => {
     (fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({
-        candidates: [{ cardImageId: "A", cardSetId: "OP12-001", cardName: "Nami (Parallel)", matchedByCode: false, localImagePath: null }],
+        candidates: [{ cardImageId: "A", cardSetId: "OP15-086", cardName: "Nami (Parallel)", matchedByCode: false, localImagePath: null }],
       }),
     });
     renderDashboard();
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(["x"], "card.jpg", { type: "image/jpeg" });
     fireEvent.change(fileInput, { target: { files: [file] } });
-
-    const candidateButton = await screen.findByText("Nami (Parallel)");
-    fireEvent.click(candidateButton);
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/?search=Nami"));
     expect(screen.getByPlaceholderText(/Buscar por nome/)).toHaveValue("Nami");
-    expect(screen.queryByText("Selecione a carta correta:")).not.toBeInTheDocument();
-  });
-
-  it("dismisses the scan suggestions without applying any search", async () => {
-    (fetch as any).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        candidates: [{ cardImageId: "A", cardSetId: "OP12-001", cardName: "Nami", matchedByCode: false, localImagePath: null }],
-      }),
-    });
-    renderDashboard();
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(["x"], "card.jpg", { type: "image/jpeg" });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    await screen.findByText("Selecione a carta correta:");
-    fireEvent.click(screen.getByText("Fechar"));
-
-    expect(screen.queryByText("Selecione a carta correta:")).not.toBeInTheDocument();
-    expect(push).not.toHaveBeenCalled();
   });
 });

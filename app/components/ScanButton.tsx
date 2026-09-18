@@ -2,24 +2,21 @@
 
 import { useState, type ChangeEvent } from "react";
 import { useTranslations } from "next-intl";
+import { stripVariantSuffix } from "../lib/cardDisplay";
 import type { ScanCandidate } from "../lib/dashboardTypes";
 
 // Botão de escanear-pra-buscar: fotografa uma carta, manda pro /api/scan, e
-// decide entre dois caminhos. Quando o candidato #1 bateu pelo código
-// impresso (matchedByCode) — sinal forte, já filtrado por um threshold de
-// similaridade em cardMatch.ts — aplica a busca direto, sem passo extra.
-// Quando não (nome/texto only, sinal mais fraco e mais propenso a apontar
-// pra carta errada — ver memory/ocr_code_recognition_limitation.md), devolve
-// a lista inteira de candidatos (via onCandidates) pro usuário escolher com
-// 1 toque em vez de cair silenciosamente numa busca errada.
+// aplica a busca direto com o melhor palpite — código impresso se leu com
+// confiança (matchedByCode), senão o nome (mais abrangente: mostra toda
+// carta com nome parecido na tela de busca normal do Dashboard, que já tem
+// filtros/imagens/tudo — não precisa de um seletor à parte pra isso, e a
+// busca continua editável se o palpite não for o certo).
 export default function ScanButton({
   onSearchTermReady,
-  onCandidates,
   onNotice,
   onError,
 }: {
   onSearchTermReady: (term: string) => void;
-  onCandidates: (candidates: ScanCandidate[]) => void;
   onNotice: (message: string | null) => void;
   onError: (message: string | null) => void;
 }) {
@@ -56,8 +53,9 @@ export default function ScanButton({
         onSearchTermReady(top.cardSetId);
         onNotice(t("scanNoticeByCode", { name: top.cardName, code: top.cardSetId }));
       } else {
-        onNotice(t("scanNoticeChooseCandidate"));
-        onCandidates(candidates);
+        const searchTerm = stripVariantSuffix(top.cardName);
+        onSearchTermReady(searchTerm);
+        onNotice(t("scanNoticeByName", { term: searchTerm }));
       }
     } catch {
       onError(t("scanErrorUpload"));

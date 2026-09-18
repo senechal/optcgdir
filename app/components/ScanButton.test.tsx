@@ -13,15 +13,7 @@ function selectFile(file: File) {
 }
 
 function renderScanButton(overrides: Partial<Parameters<typeof ScanButton>[0]> = {}) {
-  return renderWithIntl(
-    <ScanButton
-      onSearchTermReady={vi.fn()}
-      onCandidates={vi.fn()}
-      onNotice={vi.fn()}
-      onError={vi.fn()}
-      {...overrides}
-    />
-  );
+  return renderWithIntl(<ScanButton onSearchTermReady={vi.fn()} onNotice={vi.fn()} onError={vi.fn()} {...overrides} />);
 }
 
 describe("ScanButton", () => {
@@ -41,37 +33,38 @@ describe("ScanButton", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("applies the search term directly when the top candidate matched by code, skipping the picker", async () => {
-    const candidates = [
-      { cardImageId: "OP12-001", cardSetId: "OP12-001", cardName: "Monkey.D.Luffy", matchedByCode: true, localImagePath: null },
-    ];
-    (fetch as any).mockResolvedValue({ ok: true, json: async () => ({ candidates }) });
+  it("reports the printed code as the search term when matchedByCode is true", async () => {
+    (fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [{ cardImageId: "OP12-001", cardSetId: "OP12-001", cardName: "Monkey.D.Luffy", matchedByCode: true, localImagePath: null }],
+      }),
+    });
     const onSearchTermReady = vi.fn();
-    const onCandidates = vi.fn();
     const onNotice = vi.fn();
-    renderScanButton({ onSearchTermReady, onCandidates, onNotice });
+    renderScanButton({ onSearchTermReady, onNotice });
     selectFile(fakeFile());
     await waitFor(() => expect(onSearchTermReady).toHaveBeenCalledWith("OP12-001"));
-    expect(onCandidates).not.toHaveBeenCalled();
     expect(onNotice).toHaveBeenCalledWith(
       "Carta identificada pelo código: Monkey.D.Luffy (OP12-001) — não é essa? ajuste a busca acima."
     );
   });
 
-  it("bubbles up the full candidate list with a generic choose-one notice when the top candidate did not match by code", async () => {
-    const candidates = [
-      { cardImageId: "A", cardSetId: "OP15-086", cardName: "Nami (Parallel)", matchedByCode: false, localImagePath: "nami.jpg" },
-      { cardImageId: "B", cardSetId: "OP01-016", cardName: "Nami", matchedByCode: false, localImagePath: null },
-    ];
-    (fetch as any).mockResolvedValue({ ok: true, json: async () => ({ candidates }) });
+  it("falls back to the (variant-stripped) name as the search term when matchedByCode is false", async () => {
+    (fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [{ cardImageId: "A", cardSetId: "OP15-086", cardName: "Nami (Parallel)", matchedByCode: false, localImagePath: null }],
+      }),
+    });
     const onSearchTermReady = vi.fn();
-    const onCandidates = vi.fn();
     const onNotice = vi.fn();
-    renderScanButton({ onSearchTermReady, onCandidates, onNotice });
+    renderScanButton({ onSearchTermReady, onNotice });
     selectFile(fakeFile());
-    await waitFor(() => expect(onCandidates).toHaveBeenCalledWith(candidates));
-    expect(onSearchTermReady).not.toHaveBeenCalled();
-    expect(onNotice).toHaveBeenCalledWith("Selecione a carta correta:");
+    await waitFor(() => expect(onSearchTermReady).toHaveBeenCalledWith("Nami"));
+    expect(onNotice).toHaveBeenCalledWith(
+      'Código não identificado com confiança — buscando por nome: "Nami". Ajuste a busca acima se não for essa.'
+    );
   });
 
   it("reports scanErrorNoCandidates when the API returns an empty candidate list", async () => {

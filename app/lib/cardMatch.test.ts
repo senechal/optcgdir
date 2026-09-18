@@ -171,16 +171,12 @@ describe("rankCardsByOcrText", () => {
     expect(suffixed?.score).toBeCloseTo(plain?.score ?? -1, 5);
   });
 
-  it("defaults the limit to 20 candidates", () => {
-    // Regressão real: cartas populares como "Sengoku" acumulam 12+ variantes
-    // com o mesmo nome normalizado -- um limite baixo demais descarta a
-    // carta certa de forma arbitrária quando todas empatam no topo do score.
-    const cards = Array.from({ length: 25 }, (_, i) =>
+  it("defaults the limit to 8 candidates", () => {
+    const cards = Array.from({ length: 10 }, (_, i) =>
       card({ cardImageId: `c${i}`, cardSetId: `OP01-0${i}`, cardName: "Nami" })
     );
     const result = rankCardsByOcrText("Nami CHARACTER Nami Nami", cards);
-    expect(result.length).toBeLessThanOrEqual(20);
-    expect(result.length).toBeGreaterThan(8);
+    expect(result.length).toBeLessThanOrEqual(8);
   });
 
   it("respects an explicit limit smaller than the default", () => {

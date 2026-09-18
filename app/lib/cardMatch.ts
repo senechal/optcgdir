@@ -114,18 +114,14 @@ function tokenOverlapRatio(cardName: string, ocrBlob: string): number {
   return matched / tokens.length;
 }
 
-// Cartas populares acumulam muitas reimpressões/variantes com o mesmo nome
-// ao longo dos sets — "Sengoku" sozinho tem 19 entradas no catálogo, das
-// quais 12+ normalizam pro mesmo nome depois de stripVariantSuffix. Sem
-// código legível, todas empatam no topo do score, e um limite baixo corta
-// candidatos de forma arbitrária (a ordem de desempate não tem nenhum
-// sinal confiável) — inclusive descartando a carta certa. A lista já rola
-// horizontalmente na UI (ScanCandidatesList), então um limite maior não
-// exige mudança nenhuma ali; 20 cobre o pior caso observado com folga.
+// Só o candidato #1 (`candidates[0]`) é usado hoje — o scan aplica a busca
+// direto por código ou nome, sem seletor de opções (ver ScanButton.tsx).
+// O limite aqui só delimita o tamanho da resposta da API, não afeta qual
+// carta vence (o sort já roda antes do corte).
 export function rankCardsByOcrText(
   ocrText: string,
   cards: MatchableCard[],
-  limit = 20
+  limit = 8
 ): CardMatch[] {
   const codeCandidates = (ocrText.toUpperCase().match(CARD_CODE_PATTERN) ?? []).map((code) =>
     code.replace(/-/g, "")

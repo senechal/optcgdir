@@ -3,6 +3,8 @@
 // pequeno (poucos milhares de cartas) e o sinal mais forte (código impresso
 // da carta) já resolve a maior parte dos casos sozinho.
 
+import { stripVariantSuffix } from "./cardDisplay";
+
 export type MatchableCard = {
   cardImageId: string;
   cardSetId: string;
@@ -136,7 +138,15 @@ export function rankCardsByOcrText(
   const PREFIX_MATCH_SIMILARITY_FLOOR = 0.9;
 
   const scored: CardMatch[] = cards.map((card) => {
-    const normalizedName = normalize(card.cardName);
+    // O catálogo às vezes guarda o nome com um sufixo pra desambiguar
+    // internamente (ex: "Sengoku (060)", "Krieg (OP15-008)") quando duas
+    // cartas do mesmo set têm nome igual — mas a carta impressa de verdade
+    // só mostra "Sengoku"/"Krieg". Comparar contra o nome cru penalizava
+    // essas cartas na hora do match (a linha do OCR nunca bate 100% com um
+    // sufixo que não existe na foto), fazendo até desaparecerem da lista de
+    // candidatos quando o código não é lido. Mesma função já usada pra
+    // exibição (cardDisplay.ts) — só nunca tinha sido aplicada aqui.
+    const normalizedName = normalize(stripVariantSuffix(card.cardName));
     const strippedCode = card.cardSetId.replace(/-/g, "");
     const codeSimilarity = bestCodeSimilarity(codeCandidates, strippedCode);
     const tokenRatio = tokenOverlapRatio(normalizedName, ocrBlob);

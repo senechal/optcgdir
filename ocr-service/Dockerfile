@@ -26,4 +26,8 @@ EXPOSE 5000
 # assim os workers compartilham as páginas de memória do modelo via
 # copy-on-write em vez de cada um carregar sua própria cópia, e a primeira
 # request de cada worker não paga o custo de inicializar o modelo.
-CMD ["gunicorn", "--preload", "-w", "2", "-b", "0.0.0.0:5000", "src.main:app"]
+# --timeout 120: o padrão do gunicorn (30s) matava o worker no meio do
+# processamento numa foto real na CPU de produção (Celeron N3450, bem mais
+# fraca que a máquina de dev) — via "WORKER TIMEOUT" nos logs, não falta de
+# memória (mensagem padrão do gunicorn pra qualquer SIGKILL por timeout).
+CMD ["gunicorn", "--preload", "-w", "2", "--timeout", "120", "-b", "0.0.0.0:5000", "src.main:app"]

@@ -32,6 +32,8 @@ function buildPills(
   if (currentParams.powerMax) pills.push({ key: "powerMax", text: `${t("colPower")} ≤ ${currentParams.powerMax}` });
   if (currentParams.inDeck === "1") pills.push({ key: "inDeck", text: t("onlyInDeck") });
   if (currentParams.counter === "1") pills.push({ key: "counter", text: t("onlyCounter") });
+  if (currentParams.hideAltArt === "1") pills.push({ key: "hideAltArt", text: t("hideAltArt") });
+  if (currentParams.hideV1 === "1") pills.push({ key: "hideV1", text: t("hideV1") });
   return pills;
 }
 

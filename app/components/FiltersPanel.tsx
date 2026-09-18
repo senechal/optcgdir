@@ -114,6 +114,22 @@ export default function FiltersPanel({
           />{" "}
           {t("onlyCounter")}
         </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={draftFilters.hideAltArt}
+            onChange={() => setDraftFilters((prev) => ({ ...prev, hideAltArt: !prev.hideAltArt }))}
+          />{" "}
+          {t("hideAltArt")}
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={draftFilters.hideV1}
+            onChange={() => setDraftFilters((prev) => ({ ...prev, hideV1: !prev.hideV1 }))}
+          />{" "}
+          {t("hideV1")}
+        </label>
       </div>
 
       <div className="filters-apply-row">

@@ -108,6 +108,20 @@ describe("Home (page.tsx)", () => {
     });
   });
 
+  it("filters isParallel=true when hideV1 is set", async () => {
+    await homeProps({ hideV1: "1" });
+    const mainCall = findMany.mock.calls.find((c) => c[0]?.where !== undefined);
+    expect(mainCall[0].where).toEqual({ isParallel: true });
+  });
+
+  it("excludes alt art cards by name when hideAltArt is set", async () => {
+    await homeProps({ hideAltArt: "1" });
+    const mainCall = findMany.mock.calls.find((c) => c[0]?.where !== undefined);
+    expect(mainCall[0].where).toEqual({
+      NOT: { cardName: { contains: "Alternate Art", mode: "insensitive" } },
+    });
+  });
+
   it("builds a multi-field OR clause when searching", async () => {
     await homeProps({ search: "Luffy" });
     const mainCall = findMany.mock.calls.find((c) => c[0]?.where !== undefined);

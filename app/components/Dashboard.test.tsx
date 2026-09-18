@@ -108,6 +108,31 @@ describe("Dashboard", () => {
     expect(Array.from(headers).map((h) => h.textContent).sort()).toEqual(["OP-01", "OP-02"]);
   });
 
+  it("shows the set name and BS/FS ownership pills in the 'grouped' tab, marking complete ones green", () => {
+    const { container } = renderDashboard({
+      tab: "grouped",
+      cards: [
+        card({ cardImageId: "A", setId: "OP-01", cardName: "Luffy", quantity: 1 }),
+        card({ cardImageId: "B", setId: "OP-01", cardName: "Luffy (Alternate Art)", quantity: 1 }),
+        card({ cardImageId: "C", setId: "OP-01", cardName: "Zoro", quantity: 0 }),
+      ],
+    });
+    expect(screen.getByText("Romance Dawn")).toBeInTheDocument();
+    expect(screen.getByText("BS: 1/2")).toBeInTheDocument();
+    expect(screen.getByText("FS: 2/3")).toBeInTheDocument();
+    expect(container.querySelector(".set-stat-pill.complete")).not.toBeInTheDocument();
+  });
+
+  it("marks a BS/FS pill green once its ratio reaches 100%", () => {
+    const { container } = renderDashboard({
+      tab: "grouped",
+      cards: [card({ cardImageId: "A", setId: "OP-01", cardName: "Luffy", quantity: 1 })],
+    });
+    expect(screen.getByText("BS: 1/1")).toHaveClass("complete");
+    expect(screen.getByText("FS: 1/1")).toHaveClass("complete");
+    expect(container.querySelectorAll(".set-stat-pill.complete")).toHaveLength(2);
+  });
+
   it("does not show group headers in the 'all' tab", () => {
     const { container } = renderDashboard({ tab: "all" });
     expect(container.querySelectorAll("h2")).toHaveLength(0);

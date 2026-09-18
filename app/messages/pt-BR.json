@@ -56,6 +56,8 @@
     "viewGrid": "🔳 Grade",
     "viewList": "📋 Lista",
     "allCardsGroup": "Todas as cartas",
+    "baseSetStat": "BS: {owned}/{total}",
+    "fullSetStat": "FS: {owned}/{total}",
     "noCardsFound": "Nenhuma carta encontrada com esses filtros.",
     "colName": "Nome",
     "colCode": "Código",

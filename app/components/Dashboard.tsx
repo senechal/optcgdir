@@ -14,6 +14,7 @@ import CardRow from "./CardRow";
 import CardImageModal from "./CardImageModal";
 import type { Locale } from "../i18n/request";
 import type { CardWithCollectionInfo, FilterOptions, DraftFilters, Tab } from "../lib/dashboardTypes";
+import { computeSetOwnershipStats } from "../lib/cardDisplay";
 
 export default function Dashboard({
   cards,
@@ -264,61 +265,79 @@ export default function Dashboard({
         </p>
       )}
 
-      {groupedEntries.map(([groupName, groupCards]) => (
-        <section key={groupName} style={{ marginBottom: 32 }}>
-          {groupBySet && (
-            <h2 style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: 4 }}>{groupName}</h2>
-          )}
+      {groupedEntries.map(([groupName, groupCards]) => {
+        const setStats = groupBySet ? computeSetOwnershipStats(groupCards) : null;
+        return (
+          <section key={groupName} style={{ marginBottom: 32 }}>
+            {groupBySet && setStats && (
+              <div style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: 8, marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                  <h2 style={{ margin: 0 }}>{groupName}</h2>
+                  <span style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>
+                    {filterOptions.sets.find((s) => s.id === groupName)?.name}
+                  </span>
+                </div>
+                <div className="set-stats-pills">
+                  <span className={`set-stat-pill ${setStats.baseOwned === setStats.baseTotal ? "complete" : ""}`}>
+                    {t("baseSetStat", { owned: setStats.baseOwned, total: setStats.baseTotal })}
+                  </span>
+                  <span className={`set-stat-pill ${setStats.fullOwned === setStats.fullTotal ? "complete" : ""}`}>
+                    {t("fullSetStat", { owned: setStats.fullOwned, total: setStats.fullTotal })}
+                  </span>
+                </div>
+              </div>
+            )}
 
-          {groupCards.length === 0 ? (
-            <p
-              style={{
-                color: "var(--color-text-secondary)",
-                textAlign: "center",
-                padding: "var(--space-8) var(--space-4)",
-                border: "1px dashed var(--color-border-strong)",
-                borderRadius: "var(--radius-lg)",
-              }}
-            >
-              {t("noCardsFound")}
-            </p>
-          ) : view === "grid" ? (
-            <div className="card-grid">
-              {groupCards.map((card) => (
-                <CardTile
-                  key={card.cardImageId}
-                  card={card}
-                  onMutate={mutateCollection}
-                  onEnlarge={setEnlargedCard}
-                />
-              ))}
-            </div>
-          ) : (
-            <table className="card-table">
-              <thead>
-                <tr>
-                  <th className="col-image"></th>
-                  <th className="col-name">{t("colName")}</th>
-                  <th className="col-code">{t("colCode")}</th>
-                  <th className="col-color hide-mobile">{t("colColor")}</th>
-                  <th className="col-type hide-mobile">{t("colType")}</th>
-                  <th className="col-rarity hide-mobile">{t("colRarity")}</th>
-                  <th className="col-cost hide-mobile">{t("colCost")}</th>
-                  <th className="col-power hide-mobile">{t("colPower")}</th>
-                  <th className="col-qty hide-mobile">{t("colQty")}</th>
-                  <th className="col-indeck hide-mobile">{t("colInDeck")}</th>
-                  <th className="col-actions">{t("colActions")}</th>
-                </tr>
-              </thead>
-              <tbody>
+            {groupCards.length === 0 ? (
+              <p
+                style={{
+                  color: "var(--color-text-secondary)",
+                  textAlign: "center",
+                  padding: "var(--space-8) var(--space-4)",
+                  border: "1px dashed var(--color-border-strong)",
+                  borderRadius: "var(--radius-lg)",
+                }}
+              >
+                {t("noCardsFound")}
+              </p>
+            ) : view === "grid" ? (
+              <div className="card-grid">
                 {groupCards.map((card) => (
-                  <CardRow key={card.cardImageId} card={card} onMutate={mutateCollection} onEnlarge={setEnlargedCard} />
+                  <CardTile
+                    key={card.cardImageId}
+                    card={card}
+                    onMutate={mutateCollection}
+                    onEnlarge={setEnlargedCard}
+                  />
                 ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      ))}
+              </div>
+            ) : (
+              <table className="card-table">
+                <thead>
+                  <tr>
+                    <th className="col-image"></th>
+                    <th className="col-name">{t("colName")}</th>
+                    <th className="col-code">{t("colCode")}</th>
+                    <th className="col-color hide-mobile">{t("colColor")}</th>
+                    <th className="col-type hide-mobile">{t("colType")}</th>
+                    <th className="col-rarity hide-mobile">{t("colRarity")}</th>
+                    <th className="col-cost hide-mobile">{t("colCost")}</th>
+                    <th className="col-power hide-mobile">{t("colPower")}</th>
+                    <th className="col-qty hide-mobile">{t("colQty")}</th>
+                    <th className="col-indeck hide-mobile">{t("colInDeck")}</th>
+                    <th className="col-actions">{t("colActions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupCards.map((card) => (
+                    <CardRow key={card.cardImageId} card={card} onMutate={mutateCollection} onEnlarge={setEnlargedCard} />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        );
+      })}
 
       {enlargedCard && <CardImageModal card={enlargedCard} onClose={() => setEnlargedCard(null)} />}
 
@@ -414,6 +433,29 @@ export default function Dashboard({
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
           gap: var(--space-3);
+        }
+
+        .set-stats-pills {
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--space-2);
+          margin-top: var(--space-2);
+        }
+        .set-stat-pill {
+          display: inline-flex;
+          align-items: center;
+          padding: 3px var(--space-3);
+          border-radius: var(--radius-full);
+          background: var(--color-bg-subtle);
+          color: var(--color-text-secondary);
+          border: 1px solid var(--color-border);
+          font-size: var(--font-size-xs);
+          font-weight: 500;
+        }
+        .set-stat-pill.complete {
+          background: #e9f7ee;
+          color: var(--color-success);
+          border-color: var(--color-success);
         }
 
       `}</style>

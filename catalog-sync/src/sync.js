@@ -19,6 +19,25 @@ const IMAGES_PATH = process.env.CATALOG_IMAGES_PATH || "/data/catalog-images";
 const FULL_SYNC = process.env.FULL_SYNC === "true";
 const IMAGE_DOWNLOAD_DELAY_MS = 150; // não martelar o servidor deles
 
+// A optcgapi.com não deu ao Extra Booster 4 (Egghead Crisis) um set próprio
+// como fez com EB-01/02/03 — em vez disso, junta as cartas dele com o
+// lançamento numerado da vez num set_id só ("OP14-EB04", "OP15-EB04"). Aqui
+// desfazemos isso: cartas com código impresso "EB04-*" viram parte de um
+// set "EB-04" (Egghead Crisis) à parte; o resto (o set numerado em si, mais
+// os poucos reprints-bônus de sets antigos que vêm junto — mesmo padrão que
+// já existe nos outros Extra Boosters) fica no set numerado de origem.
+const BUNDLED_EB04_SETS = {
+  "OP14-EB04": { setId: "OP-14", setName: "The Azure Sea's Seven" },
+  "OP15-EB04": { setId: "OP-15", setName: "Adventure on Kami's Island" },
+};
+const EB04_SET = { setId: "EB-04", setName: "Egghead Crisis" };
+
+function resolveSetAssignment(raw) {
+  const bundled = BUNDLED_EB04_SETS[raw.set_id];
+  if (!bundled) return { setId: raw.set_id, setName: raw.set_name };
+  return (raw.card_set_id || "").startsWith("EB04-") ? EB04_SET : bundled;
+}
+
 const SOURCES = FULL_SYNC
   ? [
       { url: `${BASE_URL}/allSetCards/`, sourceType: "set" },
@@ -47,6 +66,9 @@ async function syncSets() {
   for (const s of sets) {
     // A API usa "set_id"/"set_name" nesse endpoint
     if (!s.set_id) continue;
+    // Esses dois viram OP-14/OP-15/EB-04 (ver resolveSetAssignment) — não
+    // recria o set combinado da API.
+    if (BUNDLED_EB04_SETS[s.set_id]) continue;
     await prisma.set.upsert({
       where: { id: s.set_id },
       update: { name: s.set_name },
@@ -101,7 +123,8 @@ async function upsertCard(raw, sourceType) {
     return;
   }
 
-  await ensureSetExists(raw.set_id, raw.set_name);
+  const { setId, setName } = resolveSetAssignment(raw);
+  await ensureSetExists(setId, setName);
 
   const localImagePath = await downloadImage(raw.card_image, raw.card_image_id);
 
@@ -121,7 +144,7 @@ async function upsertCard(raw, sourceType) {
       attribute: raw.attribute ?? null,
       subTypes: raw.sub_types ?? null,
       isParallel: raw.card_image_id.includes("_p"),
-      setId: raw.set_id,
+      setId,
       sourceType,
       remoteImageUrl: raw.card_image ?? null,
       localImagePath,
@@ -142,7 +165,7 @@ async function upsertCard(raw, sourceType) {
       attribute: raw.attribute ?? null,
       subTypes: raw.sub_types ?? null,
       isParallel: raw.card_image_id.includes("_p"),
-      setId: raw.set_id,
+      setId,
       sourceType,
       remoteImageUrl: raw.card_image ?? null,
       localImagePath,
@@ -168,6 +191,16 @@ async function main() {
     } catch (err) {
       // Uma fonte falhar não deve derrubar o sync inteiro
       console.error(`[sync] erro em ${source.url}:`, err.message);
+    }
+  }
+
+  // Limpa os sets combinados da API assim que nenhuma carta mais aponta pra
+  // eles (só acontece depois que todas as cartas OP14/OP15/EB04 tiverem
+  // passado por upsertCard pelo menos uma vez — ex: após um FULL_SYNC).
+  for (const staleSetId of Object.keys(BUNDLED_EB04_SETS)) {
+    const remaining = await prisma.card.count({ where: { setId: staleSetId } });
+    if (remaining === 0) {
+      await prisma.set.delete({ where: { id: staleSetId } }).catch(() => {});
     }
   }
 

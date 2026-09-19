@@ -180,6 +180,21 @@ async function upsertCard(raw, sourceType, key, fileStem) {
   });
 }
 
+// Uma carta de set e um promo/starter podem ter o mesmo card_image_id (ex:
+// "OP14-033"). Quem vem de uma fonte de maior prioridade mantém o id; as
+// demais ganham chave própria (ver assignCardKeys) em vez de sobrescrever.
+const SOURCE_PRIORITY = ["set", "starter", "promo", "don"];
+
+async function loadReservedIds(sourceType) {
+  const higher = SOURCE_PRIORITY.slice(0, SOURCE_PRIORITY.indexOf(sourceType));
+  if (higher.length === 0) return new Set();
+  const rows = await prisma.card.findMany({
+    where: { sourceType: { in: higher } },
+    select: { cardImageId: true },
+  });
+  return new Set(rows.map((r) => r.cardImageId));
+}
+
 async function main() {
   const startedAt = Date.now();
   console.log(`[sync] iniciando ${FULL_SYNC ? "sync completo" : "sync incremental"}...`);
@@ -191,11 +206,14 @@ async function main() {
     try {
       const cards = await fetchJson(source.url);
       console.log(`[sync] ${source.url} -> ${cards.length} cartas`);
-      const keyed = assignCardKeys(cards.filter((c) => {
-        if (c.card_image_id) return true;
-        console.warn("[sync] carta sem card_image_id, ignorando:", c.card_name);
-        return false;
-      }));
+      const keyed = assignCardKeys(
+        cards.filter((c) => {
+          if (c.card_image_id) return true;
+          console.warn("[sync] carta sem card_image_id, ignorando:", c.card_name);
+          return false;
+        }),
+        { reserved: await loadReservedIds(source.sourceType) }
+      );
       if (keyed.length !== cards.length) {
         console.log(`[sync] ${cards.length - keyed.length} carta(s) repetida(s) na origem descartada(s)`);
       }

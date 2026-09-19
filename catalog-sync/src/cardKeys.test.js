@@ -66,3 +66,24 @@ test("preserva a ordem original e ignora cartas sem card_image_id", () => {
   const out = assignCardKeys([raw({ card_image_id: "B-1" }), raw({ card_image_id: undefined }), raw({ card_image_id: "A-1" })]);
   assert.deepEqual(out.map((o) => o.key), ["B-1", "A-1"]);
 });
+
+test("id reservado por uma fonte de maior prioridade: nenhuma entrada fica com o id original", () => {
+  const promo = raw({
+    card_image_id: "OP14-033",
+    card_name: "Perona (Extra Grand Battle for Stores 2026)",
+    set_id: "OP14",
+    card_image: img("OP14-033_promo.jpg"),
+  });
+  const out = assignCardKeys([promo], { reserved: new Set(["OP14-033"]) });
+  assert.equal(out.length, 1);
+  assert.equal(out[0].key, "OP14-033__perona-extra-grand-battle-for-stores-2026");
+  assert.equal(out[0].fileStem, "OP14-033_promo");
+});
+
+test("ids não reservados continuam intactos mesmo quando há reservados na lista", () => {
+  const out = assignCardKeys(
+    [raw({ card_image_id: "P-001" }), raw({ card_image_id: "OP14-033", card_name: "Promo X" })],
+    { reserved: new Set(["OP14-033"]) }
+  );
+  assert.deepEqual(out.map((o) => o.key), ["P-001", "OP14-033__promo-x"]);
+});

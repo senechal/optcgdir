@@ -1,8 +1,9 @@
 // A optcgapi.com às vezes devolve variantes DIFERENTES da mesma carta com o
 // mesmo `card_image_id` (ex: "Kingdew" e "Kingdew (Pandaman Art)" são ambas
-// "OP17-006"). Como o banco usa card_image_id como chave primária, o upsert
-// de uma sobrescrevia a outra e só a última sobrevivia. Aqui atribuímos uma
-// chave única a cada variante dentro de uma mesma fonte (lista) da API.
+// "OP17-006"), e promos que repetem o id de uma carta de set (ex: o promo
+// "Perona (Extra Grand Battle...)" também é "OP14-033"). Como o banco usa
+// card_image_id como chave primária, o upsert de uma sobrescrevia a outra.
+// Aqui atribuímos uma chave única a cada variante.
 
 export function slugify(name) {
   return String(name ?? "")
@@ -27,15 +28,19 @@ function remoteFileStem(cardImage) {
 // - key: valor a gravar como cardImageId.
 // - fileStem: nome-base do arquivo local da imagem; null = usar a própria key.
 //
-// Regras pra ids repetidos:
+// `reserved`: ids que já pertencem a cartas de uma fonte de MAIOR prioridade
+// (set > starter > promo > DON). Nenhuma entrada com esse id fica com ele —
+// todas ganham chave com sufixo — pra não sobrescrever a carta da fonte
+// prioritária (a que já estava no banco, com as quantidades registradas).
+//
+// Regras pra ids repetidos dentro da mesma lista:
 // 1. Só ficam as entradas do MESMO set_id da última (mesma carta listada em
 //    dois sets, ex: OP-04 e PRB-01, continua "última ganha" — o modelo só tem
 //    um set por carta).
 // 2. Entradas com a mesma imagem são a mesma carta repetida: fica a última.
 // 3. Das restantes, a última mantém o id original (é a que já estava no
-//    banco, então quantidades já registradas não mudam de carta); as demais
-//    ganham "<id>__<slug do nome>".
-export function assignCardKeys(cards) {
+//    banco); as demais ganham "<id>__<slug do nome>".
+export function assignCardKeys(cards, { reserved = new Set() } = {}) {
   const groups = new Map();
   cards.forEach((raw, index) => {
     if (!raw.card_image_id) return;
@@ -45,7 +50,8 @@ export function assignCardKeys(cards) {
 
   const result = [];
   for (const [id, entries] of groups) {
-    if (entries.length === 1) {
+    const isReserved = reserved.has(id);
+    if (entries.length === 1 && !isReserved) {
       result.push({ ...entries[0], key: id, fileStem: null });
       continue;
     }
@@ -63,9 +69,9 @@ export function assignCardKeys(cards) {
 
     const usedKeys = new Set([id]);
     kept.forEach((entry, i) => {
-      const isLast = i === kept.length - 1;
+      const keepsPlainId = !isReserved && i === kept.length - 1;
       let key = id;
-      if (!isLast) {
+      if (!keepsPlainId) {
         const base = `${id}__${slugify(entry.raw.card_name) || "variant"}`;
         key = base;
         for (let n = 2; usedKeys.has(key); n++) key = `${base}-${n}`;

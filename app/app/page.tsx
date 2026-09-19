@@ -111,7 +111,12 @@ export default async function Home({
     // Sem `where`: o progresso da coleção (BS/FS) por set é sobre a coleção
     // inteira, não sobre o resultado filtrado/buscado atual.
     prisma.card.findMany({
-      select: { setId: true, cardName: true, collectionItems: { where: { userId }, select: { quantity: true } } },
+      select: {
+        setId: true,
+        cardName: true,
+        cardSetId: true,
+        collectionItems: { where: { userId }, select: { quantity: true } },
+      },
     }),
   ]);
 
@@ -174,16 +179,18 @@ export default async function Home({
 
   // Agrupa por set pra computar BS/FS de cada um a partir do catálogo
   // completo (allCardsForStats), não da lista já filtrada/buscada (cards).
-  const cardsBySetForStats = allCardsForStats.reduce<Record<string, { cardName: string; quantity: number }[]>>(
-    (acc, c: any) => {
-      const quantity = c.collectionItems.reduce((sum: number, ci: any) => sum + ci.quantity, 0);
-      (acc[c.setId] ||= []).push({ cardName: c.cardName, quantity });
-      return acc;
-    },
-    {}
-  );
+  const cardsBySetForStats = allCardsForStats.reduce<
+    Record<string, { cardName: string; cardSetId: string; quantity: number }[]>
+  >((acc, c: any) => {
+    const quantity = c.collectionItems.reduce((sum: number, ci: any) => sum + ci.quantity, 0);
+    (acc[c.setId] ||= []).push({ cardName: c.cardName, cardSetId: c.cardSetId, quantity });
+    return acc;
+  }, {});
   const setOwnershipStats: Record<string, SetOwnershipStats> = Object.fromEntries(
-    Object.entries(cardsBySetForStats).map(([setKey, setCards]) => [setKey, computeSetOwnershipStats(setCards)])
+    Object.entries(cardsBySetForStats).map(([setKey, setCards]) => [
+      setKey,
+      computeSetOwnershipStats(setCards, setKey),
+    ])
   );
 
   const filterOptions = {

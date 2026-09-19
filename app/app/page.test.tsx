@@ -114,15 +114,16 @@ describe("Home (page.tsx)", () => {
     expect(mainCall[0].where).toEqual({ isParallel: true });
   });
 
-  it("excludes alt art/parallel/SPR/manga cards by name when hideAltArt is set", async () => {
+  it("excludes alt art/parallel/SPR/SP/manga cards by name when hideAltArt is set", async () => {
     await homeProps({ hideAltArt: "1" });
     const mainCall = findMany.mock.calls.find((c) => c[0]?.where !== undefined);
     expect(mainCall[0].where).toEqual({
       NOT: [
-        { cardName: { contains: "Alternate Art", mode: "insensitive" } },
-        { cardName: { contains: "Parallel", mode: "insensitive" } },
-        { cardName: { contains: "SPR", mode: "insensitive" } },
-        { cardName: { contains: "Manga", mode: "insensitive" } },
+        { cardName: { contains: "(Alternate Art)", mode: "insensitive" } },
+        { cardName: { contains: "(Parallel)", mode: "insensitive" } },
+        { cardName: { contains: "(SPR)", mode: "insensitive" } },
+        { cardName: { contains: "(SP)", mode: "insensitive" } },
+        { cardName: { contains: "(Manga)", mode: "insensitive" } },
       ],
     });
   });
@@ -132,9 +133,14 @@ describe("Home (page.tsx)", () => {
       if (args?.distinct) return Promise.resolve([]);
       if (args?.select) {
         return Promise.resolve([
-          { setId: "OP-01", cardName: "Luffy", collectionItems: [{ quantity: 1 }] },
-          { setId: "OP-01", cardName: "Luffy (Alternate Art)", collectionItems: [] },
-          { setId: "OP-01", cardName: "Zoro", collectionItems: [] },
+          { setId: "OP-01", cardName: "Luffy", cardSetId: "OP01-001", collectionItems: [{ quantity: 1 }] },
+          {
+            setId: "OP-01",
+            cardName: "Luffy (Alternate Art)",
+            cardSetId: "OP01-001",
+            collectionItems: [],
+          },
+          { setId: "OP-01", cardName: "Zoro", cardSetId: "OP01-002", collectionItems: [] },
         ]);
       }
       // Query principal (filtrada): só 1 carta bate no filtro ativo.
@@ -146,6 +152,22 @@ describe("Home (page.tsx)", () => {
     expect(props.setOwnershipStats).toEqual({
       "OP-01": { baseOwned: 1, baseTotal: 2, fullOwned: 1, fullTotal: 3 },
     });
+  });
+
+  it("excludes bonus reprints from another set out of a set's baseTotal", async () => {
+    findMany.mockImplementation((args: any) => {
+      if (args?.distinct) return Promise.resolve([]);
+      if (args?.select) {
+        return Promise.resolve([
+          { setId: "OP-14", cardName: "Trafalgar Law", cardSetId: "OP14-001", collectionItems: [] },
+          { setId: "OP-14", cardName: "Crocodile", cardSetId: "OP12-108", collectionItems: [] },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const props = await homeProps({});
+    expect(props.setOwnershipStats["OP-14"]).toEqual({ baseOwned: 0, baseTotal: 1, fullOwned: 0, fullTotal: 2 });
   });
 
   it("builds a multi-field OR clause when searching", async () => {

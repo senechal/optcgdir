@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { stripVariantSuffix, cardmarketUrl, isAltArt, computeSetOwnershipStats } from "./cardDisplay";
+import { stripVariantSuffix, cardmarketUrl, isAltArt, isReprint, computeSetOwnershipStats } from "./cardDisplay";
 import type { CardWithCollectionInfo } from "./dashboardTypes";
 
 function card(overrides: Partial<CardWithCollectionInfo>): CardWithCollectionInfo {
@@ -83,6 +83,10 @@ describe("isAltArt", () => {
     expect(isAltArt("Borsalino (Manga)")).toBe(true);
   });
 
+  it("returns true when the name contains the '(SP)' marker", () => {
+    expect(isAltArt("Kid & Killer (SP)")).toBe(true);
+  });
+
   it("matches case-insensitively", () => {
     expect(isAltArt("Kouzuki Oden (alternate art)")).toBe(true);
   });
@@ -90,11 +94,32 @@ describe("isAltArt", () => {
   it("returns false for a plain card name", () => {
     expect(isAltArt("Monkey.D.Luffy")).toBe(false);
   });
+
+  it("doesn't false-positive on names that merely contain 'sp' as a substring", () => {
+    expect(isAltArt("Spandam")).toBe(false);
+    expect(isAltArt("Special Muggy Ball")).toBe(false);
+    expect(isAltArt("Speed Jil")).toBe(false);
+  });
+});
+
+describe("isReprint", () => {
+  it("returns false when the printed code matches the set's own prefix", () => {
+    expect(isReprint("OP14-001", "OP-14")).toBe(false);
+  });
+
+  it("returns true when the printed code belongs to a different set (bonus reprint)", () => {
+    expect(isReprint("OP12-108", "OP-14")).toBe(true);
+  });
+
+  it("strips hyphens from the set id to build the expected prefix", () => {
+    expect(isReprint("EB04-011", "EB-04")).toBe(false);
+    expect(isReprint("EB01-003", "EB-04")).toBe(true);
+  });
 });
 
 describe("computeSetOwnershipStats", () => {
   it("returns all zeros for an empty set", () => {
-    expect(computeSetOwnershipStats([])).toEqual({ baseOwned: 0, baseTotal: 0, fullOwned: 0, fullTotal: 0 });
+    expect(computeSetOwnershipStats([], "OP-01")).toEqual({ baseOwned: 0, baseTotal: 0, fullOwned: 0, fullTotal: 0 });
   });
 
   it("counts base set (non-alt-art) and full set (all cards) separately", () => {
@@ -104,6 +129,14 @@ describe("computeSetOwnershipStats", () => {
       card({ cardImageId: "c", cardName: "Zoro", quantity: 0 }),
       card({ cardImageId: "d", cardName: "Zoro (Alternate Art)", quantity: 2 }),
     ];
-    expect(computeSetOwnershipStats(cards)).toEqual({ baseOwned: 1, baseTotal: 2, fullOwned: 2, fullTotal: 4 });
+    expect(computeSetOwnershipStats(cards, "OP-01")).toEqual({ baseOwned: 1, baseTotal: 2, fullOwned: 2, fullTotal: 4 });
+  });
+
+  it("excludes reprints from another set out of the base set, but keeps them in the full set", () => {
+    const cards = [
+      card({ cardImageId: "a", cardName: "Trafalgar Law", cardSetId: "OP14-001", quantity: 1 }),
+      card({ cardImageId: "b", cardName: "Crocodile", cardSetId: "OP12-108", quantity: 1 }), // reprint bônus
+    ];
+    expect(computeSetOwnershipStats(cards, "OP-14")).toEqual({ baseOwned: 1, baseTotal: 1, fullOwned: 2, fullTotal: 2 });
   });
 });

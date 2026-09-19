@@ -71,6 +71,38 @@ describe("isAltArt", () => {
     expect(isAltArt("Kouzuki Oden (Alternate Art)")).toBe(true);
   });
 
+  it("returns true for the 'Super Alternate Art' variants", () => {
+    expect(isAltArt("Sabo (120) (Super Alternate Art)")).toBe(true);
+    expect(isAltArt("Portgas.D.Ace (119) (Red Super Alternate Art)")).toBe(true);
+    expect(isAltArt("Monkey.D.Luffy (Super Leader Alternate Art)")).toBe(true);
+  });
+
+  it("returns true for the other variants that repeat a card's code", () => {
+    for (const name of [
+      "Nami (P-053) (Full Art)",
+      "Slow-Slow Beam Sword (Pirate Foil)",
+      "Eustass\"Captain\"Kid (Jolly Roger Foil)",
+      "Kid (Textured Foil)",
+      "Perona (Box Topper)",
+      "Kalifa (Dash Pack)",
+      "Doflamingo (Wanted Poster)",
+      "Otama (Reprint)",
+      "Portgas.D.Ace (TR)",
+    ]) {
+      expect(isAltArt(name)).toBe(true);
+    }
+  });
+
+  it("doesn't treat character-name suffixes as alt art", () => {
+    expect(isAltArt("Zephyr (Navy)")).toBe(false);
+    expect(isAltArt("Mr.3 (Galdino)")).toBe(false);
+    expect(isAltArt("Sengoku (060)")).toBe(false);
+  });
+
+  it("returns true when the name contains 'Pandaman Art'", () => {
+    expect(isAltArt("Kingdew (Pandaman Art)")).toBe(true);
+  });
+
   it("returns true when the name contains 'Parallel'", () => {
     expect(isAltArt("Jack (Parallel)")).toBe(true);
   });

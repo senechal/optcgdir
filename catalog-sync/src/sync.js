@@ -12,6 +12,7 @@
 import { PrismaClient } from "@prisma/client";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { assignCardKeys } from "./cardKeys.js";
 
 const prisma = new PrismaClient();
 const BASE_URL = process.env.OPTCGAPI_BASE_URL || "https://optcgapi.com/api";
@@ -32,7 +33,16 @@ const BUNDLED_EB04_SETS = {
 };
 const EB04_SET = { setId: "EB-04", setName: "Egghead Crisis" };
 
-function resolveSetAssignment(raw) {
+// Promos vêm com dezenas de set_id soltos ("P", "OP01", "ST01"...) que não
+// existem em /allSets/ — criaria dezenas de sets falsos misturados com os
+// reais. E as cartas DON não têm set_id nenhum (o upsert quebrava). Cada
+// uma dessas fontes vira um set único.
+const PROMO_SET = { setId: "PROMO", setName: "One Piece Promotion Cards" };
+const DON_SET = { setId: "DON", setName: "DON!! Cards" };
+
+function resolveSetAssignment(raw, sourceType) {
+  if (sourceType === "promo") return PROMO_SET;
+  if (sourceType === "don") return DON_SET;
   const bundled = BUNDLED_EB04_SETS[raw.set_id];
   if (!bundled) return { setId: raw.set_id, setName: raw.set_name };
   return (raw.card_set_id || "").startsWith("EB04-") ? EB04_SET : bundled;
@@ -42,7 +52,7 @@ const SOURCES = FULL_SYNC
   ? [
       { url: `${BASE_URL}/allSetCards/`, sourceType: "set" },
       { url: `${BASE_URL}/allSTCards/`, sourceType: "starter" },
-      { url: `${BASE_URL}/allPromoCards/`, sourceType: "promo" },
+      { url: `${BASE_URL}/allPromos/`, sourceType: "promo" },
       { url: `${BASE_URL}/allDonCards/`, sourceType: "don" },
     ]
   : [
@@ -92,10 +102,10 @@ async function ensureSetExists(setId, fallbackName) {
   }
 }
 
-async function downloadImage(remoteUrl, cardImageId) {
+async function downloadImage(remoteUrl, fileStem) {
   if (!remoteUrl) return null;
   const ext = path.extname(new URL(remoteUrl).pathname) || ".jpg";
-  const filename = `${cardImageId}${ext}`;
+  const filename = `${fileStem}${ext}`;
   const localPath = path.join(IMAGES_PATH, filename);
 
   try {
@@ -117,19 +127,16 @@ async function downloadImage(remoteUrl, cardImageId) {
   return filename;
 }
 
-async function upsertCard(raw, sourceType) {
-  if (!raw.card_image_id) {
-    console.warn("[sync] carta sem card_image_id, ignorando:", raw.card_name);
-    return;
-  }
-
-  const { setId, setName } = resolveSetAssignment(raw);
+// `key` é o cardImageId a gravar (já desambiguado por assignCardKeys) e
+// `fileStem` o nome-base do arquivo da imagem (null = usa a própria key).
+async function upsertCard(raw, sourceType, key, fileStem) {
+  const { setId, setName } = resolveSetAssignment(raw, sourceType);
   await ensureSetExists(setId, setName);
 
-  const localImagePath = await downloadImage(raw.card_image, raw.card_image_id);
+  const localImagePath = await downloadImage(raw.card_image, fileStem ?? key);
 
   await prisma.card.upsert({
-    where: { cardImageId: raw.card_image_id },
+    where: { cardImageId: key },
     update: {
       cardSetId: raw.card_set_id ?? raw.card_image_id,
       cardName: raw.card_name,
@@ -151,7 +158,7 @@ async function upsertCard(raw, sourceType) {
       lastSyncedAt: new Date(),
     },
     create: {
-      cardImageId: raw.card_image_id,
+      cardImageId: key,
       cardSetId: raw.card_set_id ?? raw.card_image_id,
       cardName: raw.card_name,
       cardText: raw.card_text ?? null,
@@ -184,8 +191,16 @@ async function main() {
     try {
       const cards = await fetchJson(source.url);
       console.log(`[sync] ${source.url} -> ${cards.length} cartas`);
-      for (const raw of cards) {
-        await upsertCard(raw, source.sourceType);
+      const keyed = assignCardKeys(cards.filter((c) => {
+        if (c.card_image_id) return true;
+        console.warn("[sync] carta sem card_image_id, ignorando:", c.card_name);
+        return false;
+      }));
+      if (keyed.length !== cards.length) {
+        console.log(`[sync] ${cards.length - keyed.length} carta(s) repetida(s) na origem descartada(s)`);
+      }
+      for (const { raw, key, fileStem } of keyed) {
+        await upsertCard(raw, source.sourceType, key, fileStem);
         total++;
       }
     } catch (err) {

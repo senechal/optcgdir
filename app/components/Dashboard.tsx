@@ -281,9 +281,11 @@ export default function Dashboard({
                 </div>
                 {setStats && (
                   <div className="set-stats-pills">
-                    <span className={`set-stat-pill ${setStats.baseOwned === setStats.baseTotal ? "complete" : ""}`}>
-                      {t("baseSetStat", { owned: setStats.baseOwned, total: setStats.baseTotal })}
-                    </span>
+                    {setStats.baseTotal > 0 && (
+                      <span className={`set-stat-pill ${setStats.baseOwned === setStats.baseTotal ? "complete" : ""}`}>
+                        {t("baseSetStat", { owned: setStats.baseOwned, total: setStats.baseTotal })}
+                      </span>
+                    )}
                     <span className={`set-stat-pill ${setStats.fullOwned === setStats.fullTotal ? "complete" : ""}`}>
                       {t("fullSetStat", { owned: setStats.fullOwned, total: setStats.fullTotal })}
                     </span>

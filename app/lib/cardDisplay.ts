@@ -19,13 +19,35 @@ export function cardmarketUrl(card: CardWithCollectionInfo): string {
 
 // "Alt art" não é um campo próprio no catálogo — é uma variante marcada no
 // próprio card_name (ex: "Kouzuki Oden (Alternate Art)", "Jack (Parallel)",
-// "Kouzuki Oden (SPR)", "Kid & Killer (SP)", "Borsalino (Manga)"). Parallel/
-// SPR/SP/Manga contam como alt art neste sistema, não só "Alternate Art" em
-// si. Marcas incluem os parênteses de propósito: "SP" sozinho bateria em
+// "Kouzuki Oden (SPR)", "Kid & Killer (SP)", "Borsalino (Manga)", "Kingdew
+// (Pandaman Art)"). Neste sistema contam como alt art todas as versões
+// alternativas de uma carta que repetem o código dela: Parallel/SPR/SP/
+// Manga/Pandaman/TR, Full Art, os foils (Pirate/Jolly Roger/Textured), Box
+// Topper, Dash Pack, Wanted Poster e Reprint. Ficam de fora sufixos que são
+// parte do nome do personagem (ex: "Zephyr (Navy)", "Mr.3 (Galdino)").
+// "Alternate Art" fica sem parênteses de propósito pra também pegar
+// "(Super Alternate Art)", "(Red Super Alternate Art)" e "(Super Leader
+// Alternate Art)". Os demais incluem os parênteses: "SP" sozinho bateria em
 // substrings de nomes normais tipo "Spandam" ou "Speed" — o marcador de
 // verdade é sempre "(SP)" isolado. Lista compartilhada com o filtro
 // "Ocultar alt arts" (app/app/page.tsx) pra não duplicar os textos.
-export const ALT_ART_MARKERS = ["(Alternate Art)", "(Parallel)", "(SPR)", "(SP)", "(Manga)"];
+export const ALT_ART_MARKERS = [
+  "Alternate Art",
+  "(Pandaman Art)",
+  "(Parallel)",
+  "(SPR)",
+  "(SP)",
+  "(TR)",
+  "(Manga)",
+  "(Full Art)",
+  "(Pirate Foil)",
+  "(Jolly Roger Foil)",
+  "(Textured Foil)",
+  "(Box Topper)",
+  "(Dash Pack)",
+  "(Wanted Poster)",
+  "(Reprint)",
+];
 
 export function isAltArt(cardName: string): boolean {
   const lowerName = cardName.toLowerCase();

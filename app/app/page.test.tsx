@@ -32,6 +32,7 @@ vi.mock("../lib/prisma", () => ({
 
 import Home from "./page";
 import DashboardMock from "../components/Dashboard";
+import { ALT_ART_MARKERS } from "../lib/cardDisplay";
 
 function rawCard(overrides: Record<string, unknown> = {}) {
   return {
@@ -114,18 +115,13 @@ describe("Home (page.tsx)", () => {
     expect(mainCall[0].where).toEqual({ isParallel: true });
   });
 
-  it("excludes alt art/parallel/SPR/SP/manga cards by name when hideAltArt is set", async () => {
+  it("excludes every alt art marker by name when hideAltArt is set", async () => {
     await homeProps({ hideAltArt: "1" });
     const mainCall = findMany.mock.calls.find((c) => c[0]?.where !== undefined);
     expect(mainCall[0].where).toEqual({
-      NOT: [
-        { cardName: { contains: "(Alternate Art)", mode: "insensitive" } },
-        { cardName: { contains: "(Parallel)", mode: "insensitive" } },
-        { cardName: { contains: "(SPR)", mode: "insensitive" } },
-        { cardName: { contains: "(SP)", mode: "insensitive" } },
-        { cardName: { contains: "(Manga)", mode: "insensitive" } },
-      ],
+      NOT: ALT_ART_MARKERS.map((marker) => ({ cardName: { contains: marker, mode: "insensitive" } })),
     });
+    expect(mainCall[0].where.NOT).toHaveLength(ALT_ART_MARKERS.length);
   });
 
   it("computes setOwnershipStats from the full catalog, not the currently filtered card list", async () => {

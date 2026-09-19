@@ -132,6 +132,16 @@ describe("Dashboard", () => {
     expect(container.querySelectorAll(".set-stat-pill.complete")).toHaveLength(2);
   });
 
+  it("hides the BS pill for sets with no base cards (promos, DON), keeping FS", () => {
+    renderDashboard({
+      tab: "grouped",
+      cards: [card({ cardImageId: "A", setId: "OP-01" })],
+      setOwnershipStats: { "OP-01": { baseOwned: 0, baseTotal: 0, fullOwned: 2, fullTotal: 5 } },
+    });
+    expect(screen.queryByText(/^BS:/)).not.toBeInTheDocument();
+    expect(screen.getByText("FS: 2/5")).toBeInTheDocument();
+  });
+
   it("keeps set ownership pills as given by the server, regardless of the currently filtered card list", () => {
     // A lista de cards pode estar reduzida por um filtro ativo (ex: só 1
     // carta batendo na busca), mas o progresso de coleção do set (BS/FS)

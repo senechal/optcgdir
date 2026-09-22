@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, act } from "@testing-library/react";
 import { renderWithIntl } from "../test-utils";
 import CardImageModal from "./CardImageModal";
+import { mockIntersectionObservers } from "../vitest.setup";
 import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 
 function card(overrides: Partial<CardWithCollectionInfo> = {}): CardWithCollectionInfo {
@@ -33,9 +34,11 @@ describe("CardImageModal", () => {
     expect(screen.getByText("OP01-001")).toBeInTheDocument();
   });
 
-  it("shows a placeholder block when there's no local image", () => {
-    const { container } = renderWithIntl(<CardImageModal card={card()} onClose={vi.fn()} />);
-    expect(container.querySelector("img")).not.toBeInTheDocument();
+  it("shows the card-back placeholder image when there's no local image", () => {
+    renderWithIntl(<CardImageModal card={card()} onClose={vi.fn()} />);
+    act(() => mockIntersectionObservers.at(-1)!.trigger(true));
+    const img = screen.getByAltText("Monkey.D.Luffy") as HTMLImageElement;
+    expect(img.src).toContain("card-back-placeholder.png");
   });
 
   it("calls onClose when clicking the backdrop", () => {

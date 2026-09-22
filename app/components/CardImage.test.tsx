@@ -64,4 +64,24 @@ describe("CardImage", () => {
     triggerLastObserver(false);
     expect(container.querySelector("img")).not.toBeInTheDocument();
   });
+
+  it("uses the card-back placeholder directly when src is null (no image in the catalog)", () => {
+    render(<CardImage src={null} alt="No image" />);
+    triggerLastObserver(true);
+    const img = screen.getByAltText("No image") as HTMLImageElement;
+    expect(img.src).toContain("card-back-placeholder.png");
+  });
+
+  it("falls back to the card-back placeholder when the real image fails to load", () => {
+    render(<CardImage src="/foo.jpg" alt="Broken" />);
+    triggerLastObserver(true);
+    const img = screen.getByAltText("Broken") as HTMLImageElement;
+    expect(img.src).not.toContain("card-back-placeholder.png");
+
+    act(() => {
+      img.dispatchEvent(new Event("error"));
+    });
+
+    expect((screen.getByAltText("Broken") as HTMLImageElement).src).toContain("card-back-placeholder.png");
+  });
 });

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, act } from "@testing-library/react";
 import { renderWithIntl } from "../test-utils";
 import CardRow from "./CardRow";
+import { mockIntersectionObservers } from "../vitest.setup";
 import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 
 function card(overrides: Partial<CardWithCollectionInfo> = {}): CardWithCollectionInfo {
@@ -37,9 +38,11 @@ function renderRow(c: CardWithCollectionInfo, onMutate = vi.fn(), onEnlarge = vi
 }
 
 describe("CardRow", () => {
-  it("shows a placeholder thumb instead of an image when there's no local image", () => {
-    const { container } = renderRow(card());
-    expect(container.querySelector("img")).not.toBeInTheDocument();
+  it("shows the card-back placeholder image instead of a real one when there's no local image", () => {
+    renderRow(card());
+    act(() => mockIntersectionObservers.at(-1)!.trigger(true));
+    const img = screen.getByAltText("Monkey.D.Luffy") as HTMLImageElement;
+    expect(img.src).toContain("card-back-placeholder.png");
   });
 
   it("opens the enlarge modal when the thumbnail is clicked, given a local image", () => {

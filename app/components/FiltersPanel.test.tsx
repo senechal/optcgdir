@@ -54,7 +54,7 @@ describe("FiltersPanel", () => {
     expect(screen.getByDisplayValue("Vermelho")).toBeInTheDocument();
     expect(screen.getByDisplayValue("SR")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Character")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Romance Dawn")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("OP-01 Romance Dawn")).toBeInTheDocument();
   });
 
   it("updates the color field when the select changes", () => {

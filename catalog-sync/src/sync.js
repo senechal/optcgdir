@@ -3,7 +3,9 @@
 //
 // Uso:
 //   FULL_SYNC=true node src/sync.js   -> baixa tudo (seed inicial)
-//   node src/sync.js                 -> incremental, usa endpoints /twoweeks/
+//   node src/sync.js                 -> sets/starter decks via /twoweeks/
+//                                        (incremental); promos/Don!! sempre
+//                                        via endpoint completo (ver SOURCES)
 //
 // A API não tem auth nem rate limit formal, mas é hospedada numa VPS pessoal
 // do mantenedor -- por isso: 1 sync por execução, pequeno atraso entre
@@ -48,22 +50,33 @@ function resolveSetAssignment(raw, sourceType) {
   return (raw.card_set_id || "").startsWith("EB04-") ? EB04_SET : bundled;
 }
 
-const SOURCES = FULL_SYNC
-  ? [
-      { url: `${BASE_URL}/allSetCards/`, sourceType: "set" },
-      { url: `${BASE_URL}/allSTCards/`, sourceType: "starter" },
-      { url: `${BASE_URL}/allPromos/`, sourceType: "promo" },
-      { url: `${BASE_URL}/allDonCards/`, sourceType: "don" },
-    ]
-  : [
-      // Sync incremental: só cartas atualizadas nas últimas 2 semanas
-      { url: `${BASE_URL}/sets/card/twoweeks/`, sourceType: "set" },
-      { url: `${BASE_URL}/decks/card/twoweeks/`, sourceType: "starter" },
-      { url: `${BASE_URL}/promos/card/twoweeks/`, sourceType: "promo" },
-    ];
+// Sets e starter decks têm dataset grande (milhares/centenas de cartas),
+// então vale usar o endpoint incremental (/twoweeks/) fora do FULL_SYNC —
+// a API devolve 404 em vez de lista vazia quando não há nada atualizado no
+// período (emptyOn404 trata isso como "nada novo", não erro).
+//
+// Promos e Don!! sempre usam o endpoint completo, mesmo fora do
+// FULL_SYNC: Don!! nunca teve um endpoint /twoweeks/ (cartas DON quase
+// nunca mudam, então nem faz sentido ter), e o de promos existe na
+// documentação mas devolve 404 sempre, mesmo com promos recentes de fato
+// existindo — não dá pra confiar nele. Datasets pequenos (dezenas/poucas
+// centenas de cartas), então buscar tudo toda vez sai barato.
+const SOURCES = [
+  FULL_SYNC
+    ? { url: `${BASE_URL}/allSetCards/`, sourceType: "set" }
+    : { url: `${BASE_URL}/sets/card/twoweeks/`, sourceType: "set", emptyOn404: true },
+  FULL_SYNC
+    ? { url: `${BASE_URL}/allSTCards/`, sourceType: "starter" }
+    : { url: `${BASE_URL}/decks/card/twoweeks/`, sourceType: "starter", emptyOn404: true },
+  { url: `${BASE_URL}/allPromos/`, sourceType: "promo" },
+  { url: `${BASE_URL}/allDonCards/`, sourceType: "don" },
+];
 
-async function fetchJson(url) {
+async function fetchJson(url, { emptyOn404 = false } = {}) {
   const res = await fetch(url);
+  if (res.status === 404 && emptyOn404) {
+    return [];
+  }
   if (!res.ok) {
     throw new Error(`Falha ao buscar ${url}: HTTP ${res.status}`);
   }
@@ -214,7 +227,7 @@ async function main() {
   let total = 0;
   for (const source of SOURCES) {
     try {
-      const cards = await fetchJson(source.url);
+      const cards = await fetchJson(source.url, { emptyOn404: source.emptyOn404 });
       console.log(`[sync] ${source.url} -> ${cards.length} cartas`);
       for (const raw of cards) {
         if (!raw.card_image_id) {

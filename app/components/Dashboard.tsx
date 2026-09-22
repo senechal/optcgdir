@@ -183,7 +183,12 @@ export default function Dashboard({
           <h1 style={{ marginBottom: 4 }}>{t("title")}</h1>
           <span style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>v{version}</span>
         </div>
-        <LocaleSwitcher current={locale} />
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <a href="/admin" style={{ fontSize: 12 }}>
+            {t("editImagesLink")}
+          </a>
+          <LocaleSwitcher current={locale} />
+        </div>
       </div>
       <p style={{ color: "var(--color-text-secondary)", marginTop: 0, marginBottom: 20 }}>
         {t("cardsFound", { count: cards.length })} {isPending && t("updating")}

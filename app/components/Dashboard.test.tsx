@@ -68,6 +68,7 @@ describe("Dashboard", () => {
     expect(screen.getByText("OPTCG Collection Manager")).toBeInTheDocument();
     expect(screen.getByText("v1.2.3")).toBeInTheDocument();
     expect(screen.getByText("2 cartas encontradas")).toBeInTheDocument();
+    expect(screen.getByText("Editar imagens").closest("a")).toHaveAttribute("href", "/admin");
   });
 
   it("doesn't repeat the card count above the list when no filter is active", () => {

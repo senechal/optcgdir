@@ -56,14 +56,22 @@ const SOURCES = FULL_SYNC
       { url: `${BASE_URL}/allDonCards/`, sourceType: "don" },
     ]
   : [
-      // Sync incremental: só cartas atualizadas nas últimas 2 semanas
-      { url: `${BASE_URL}/sets/card/twoweeks/`, sourceType: "set" },
-      { url: `${BASE_URL}/decks/card/twoweeks/`, sourceType: "starter" },
-      { url: `${BASE_URL}/promos/card/twoweeks/`, sourceType: "promo" },
+      // Sync incremental: só cartas atualizadas nas últimas 2 semanas.
+      // Quando não há nenhuma carta atualizada no período, a API devolve
+      // 404 em vez de uma lista vazia (confirmado ao vivo) — emptyOn404
+      // trata isso como "nada novo" em vez de erro. Não existe endpoint
+      // /twoweeks/ pra Don!! (cartas DON quase nunca mudam), por isso não
+      // tem fonte "don" aqui — só no sync completo (FULL_SYNC) acima.
+      { url: `${BASE_URL}/sets/card/twoweeks/`, sourceType: "set", emptyOn404: true },
+      { url: `${BASE_URL}/decks/card/twoweeks/`, sourceType: "starter", emptyOn404: true },
+      { url: `${BASE_URL}/promos/card/twoweeks/`, sourceType: "promo", emptyOn404: true },
     ];
 
-async function fetchJson(url) {
+async function fetchJson(url, { emptyOn404 = false } = {}) {
   const res = await fetch(url);
+  if (res.status === 404 && emptyOn404) {
+    return [];
+  }
   if (!res.ok) {
     throw new Error(`Falha ao buscar ${url}: HTTP ${res.status}`);
   }
@@ -214,7 +222,7 @@ async function main() {
   let total = 0;
   for (const source of SOURCES) {
     try {
-      const cards = await fetchJson(source.url);
+      const cards = await fetchJson(source.url, { emptyOn404: source.emptyOn404 });
       console.log(`[sync] ${source.url} -> ${cards.length} cartas`);
       for (const raw of cards) {
         if (!raw.card_image_id) {

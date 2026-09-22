@@ -6,6 +6,19 @@
   "Common": {
     "close": "Fechar"
   },
+  "Admin": {
+    "title": "Editar imagens",
+    "description": "Busque uma carta pra corrigir a imagem dela — sem imagem, ou imagem errada/duplicada de outra variante.",
+    "backToDashboard": "← Voltar pra busca",
+    "searchPlaceholder": "Nome, código ou id da carta",
+    "searchButton": "Buscar",
+    "noResults": "Nenhuma carta encontrada.",
+    "or": "ou",
+    "urlPlaceholder": "Colar uma URL de imagem",
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "saveError": "Não foi possível salvar a imagem."
+  },
   "Colors": {
     "Red": "Vermelho",
     "Green": "Verde",
@@ -16,6 +29,7 @@
   },
   "Dashboard": {
     "title": "OPTCG Collection Manager",
+    "editImagesLink": "Editar imagens",
     "cardsFound": "{count, plural, one {# carta encontrada} other {# cartas encontradas}}",
     "updating": "— atualizando...",
     "searchPlaceholder": "Buscar por nome, código (ex: OP01-001) ou texto do efeito...",

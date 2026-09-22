@@ -6,6 +6,19 @@
   "Common": {
     "close": "Close"
   },
+  "Admin": {
+    "title": "Edit images",
+    "description": "Search for a card to fix its image — missing, or wrong/duplicated from another variant.",
+    "backToDashboard": "← Back to search",
+    "searchPlaceholder": "Name, code or card id",
+    "searchButton": "Search",
+    "noResults": "No cards found.",
+    "or": "or",
+    "urlPlaceholder": "Paste an image URL",
+    "save": "Save",
+    "saving": "Saving...",
+    "saveError": "Couldn't save the image."
+  },
   "Colors": {
     "Red": "Red",
     "Green": "Green",
@@ -16,6 +29,7 @@
   },
   "Dashboard": {
     "title": "OPTCG Collection Manager",
+    "editImagesLink": "Edit images",
     "cardsFound": "{count, plural, one {# card found} other {# cards found}}",
     "updating": "— updating...",
     "searchPlaceholder": "Search by name, code (e.g. OP01-001) or card text...",

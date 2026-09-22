@@ -72,7 +72,7 @@ services:
       timeout: 5s
       retries: 30
     volumes:
-      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images:ro   # app só lê as imagens já sincronizadas
+      - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images      # leitura + escrita: a página /admin corrige imagens direto por aqui
       - /DATA/AppData/optcgdir/scan-temp:/data/scan-temp                # app é o único que escreve aqui
 
   # Recebe o caminho de uma foto (já salva pelo app em /data/scan-temp) e

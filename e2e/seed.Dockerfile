@@ -14,6 +14,7 @@ COPY catalog-sync/package.json ./package.json
 RUN npm install
 RUN npx prisma generate
 
+COPY catalog-sync/src/cardHash.js ./cardHash.js
 COPY e2e/seed.mjs ./seed.mjs
 
 ENTRYPOINT ["node", "seed.mjs"]

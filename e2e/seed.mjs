@@ -6,6 +6,7 @@
 // catalog-sync (já tem o Prisma Client gerado a partir do schema real).
 import { PrismaClient } from "@prisma/client";
 import { spawnSync } from "node:child_process";
+import { computeCardId } from "./cardHash.js";
 
 const SET = { id: "OP-01", name: "Romance Dawn" };
 
@@ -65,7 +66,14 @@ async function main() {
   try {
     await prisma.set.upsert({ where: { id: SET.id }, update: {}, create: SET });
     for (const card of CARDS) {
-      await prisma.card.upsert({ where: { cardImageId: card.cardImageId }, update: card, create: card });
+      const id = computeCardId({
+        cardName: card.cardName,
+        setId: card.setId,
+        cardSetId: card.cardSetId,
+        cardImageId: card.cardImageId,
+        cardImage: card.remoteImageUrl,
+      });
+      await prisma.card.upsert({ where: { id }, update: card, create: { id, ...card } });
     }
     console.log(`[e2e-seed] seeded ${CARDS.length} cards in set ${SET.id}`);
   } finally {

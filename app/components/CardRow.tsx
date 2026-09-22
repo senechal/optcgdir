@@ -36,10 +36,8 @@ export default function CardRow({
             </div>
           </button>
         ) : (
-          <div
-            className="row-thumb"
-            style={{ position: "relative", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }}
-          >
+          <div className="row-thumb" style={{ position: "relative" }}>
+            <CardImage src={null} alt={card.cardName} />
             <CollectionStatusBadge quantity={card.quantity} cardType={card.cardType} size="sm" />
           </div>
         )}

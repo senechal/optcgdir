@@ -35,7 +35,7 @@ export default function CardTile({
             <CardImage src={`/api/catalog-image/${card.localImagePath}`} alt={card.cardName} />
           </button>
         ) : (
-          <div style={{ aspectRatio: "63 / 88", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }} />
+          <CardImage src={null} alt={card.cardName} />
         )}
         <CollectionStatusBadge quantity={card.quantity} cardType={card.cardType} />
       </div>

@@ -66,7 +66,7 @@ export default function FiltersPanel({
           <option value="">{t("filterSetAll")}</option>
           {filterOptions.sets.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.name}
+              {s.id} {s.name}
             </option>
           ))}
         </select>

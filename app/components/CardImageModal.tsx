@@ -50,16 +50,12 @@ export default function CardImageModal({
         >
           ✕
         </button>
-        {card.localImagePath ? (
-          <CardImage
-            src={`/api/catalog-image/${card.localImagePath}`}
-            alt={card.cardName}
-            objectFit="contain"
-            sizes="(max-width: 600px) 100vw, 420px"
-          />
-        ) : (
-          <div style={{ aspectRatio: "63 / 88", background: "var(--color-bg-subtle)", borderRadius: "var(--radius-sm)" }} />
-        )}
+        <CardImage
+          src={card.localImagePath ? `/api/catalog-image/${card.localImagePath}` : null}
+          alt={card.cardName}
+          objectFit="contain"
+          sizes="(max-width: 600px) 100vw, 420px"
+        />
         <div style={{ marginTop: 10, fontWeight: 600 }}>{card.cardName}</div>
         <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{card.cardSetId}</div>
       </div>

@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { stripVariantSuffix, cardmarketUrl, isAltArt, isReprint, computeSetOwnershipStats } from "./cardDisplay";
+import {
+  stripVariantSuffix,
+  cardmarketUrl,
+  isAltArt,
+  isSP,
+  isReprint,
+  computeSetOwnershipStats,
+  compareCardsForDisplay,
+} from "./cardDisplay";
 import type { CardWithCollectionInfo } from "./dashboardTypes";
 
 function card(overrides: Partial<CardWithCollectionInfo>): CardWithCollectionInfo {
@@ -170,5 +178,56 @@ describe("computeSetOwnershipStats", () => {
       card({ cardImageId: "b", cardName: "Crocodile", cardSetId: "OP12-108", quantity: 1 }), // reprint bônus
     ];
     expect(computeSetOwnershipStats(cards, "OP-14")).toEqual({ baseOwned: 1, baseTotal: 1, fullOwned: 2, fullTotal: 2 });
+  });
+});
+
+describe("isSP", () => {
+  it("returns true for the '(SP)' marker", () => {
+    expect(isSP("Boa Hancock - OP14-112 (SP)")).toBe(true);
+  });
+
+  it("returns false for a plain or alt-art name", () => {
+    expect(isSP("Monkey.D.Luffy")).toBe(false);
+    expect(isSP("Boa Hancock - OP14-112 (Alternate Art)")).toBe(false);
+  });
+});
+
+describe("compareCardsForDisplay", () => {
+  function c(overrides: Partial<CardWithCollectionInfo>) {
+    return card({ cardSetId: "OP14-001", setId: "OP-14", ...overrides });
+  }
+
+  it("orders by printed code first, grouping a card with its variants", () => {
+    const a = c({ cardImageId: "a", cardSetId: "OP14-001" });
+    const b = c({ cardImageId: "b", cardSetId: "OP14-002" });
+    expect(compareCardsForDisplay(a, b)).toBeLessThan(0);
+    expect(compareCardsForDisplay(b, a)).toBeGreaterThan(0);
+  });
+
+  it("within the same code, sorts the common version before its alt art", () => {
+    const base = c({ cardImageId: "a", cardName: "Trafalgar Law" });
+    const alt = c({ cardImageId: "b", cardName: "Trafalgar Law (Alternate Art)" });
+    expect(compareCardsForDisplay(base, alt)).toBeLessThan(0);
+    expect(compareCardsForDisplay(alt, base)).toBeGreaterThan(0);
+  });
+
+  it("within the same set, sorts SP after every other card regardless of its own code", () => {
+    const sp = c({ cardImageId: "a", cardSetId: "OP14-001", cardName: "Boa Hancock (SP)" });
+    const laterCodeNonSp = c({ cardImageId: "b", cardSetId: "OP14-090", cardName: "Someone Else" });
+    expect(compareCardsForDisplay(sp, laterCodeNonSp)).toBeGreaterThan(0);
+    expect(compareCardsForDisplay(laterCodeNonSp, sp)).toBeLessThan(0);
+  });
+
+  it("does not apply the SP-last rule across different sets", () => {
+    const spInSetA = c({ cardImageId: "a", setId: "OP-14", cardSetId: "OP14-001", cardName: "Boa Hancock (SP)" });
+    const nonSpInSetB = c({ cardImageId: "b", setId: "OP-15", cardSetId: "OP14-001", cardName: "Someone Else" });
+    // Mesmo código impresso (reprint bônus) mas sets diferentes: a regra de SP não atravessa sets, só o código decide.
+    expect(compareCardsForDisplay(spInSetA, nonSpInSetB)).toBe(0);
+  });
+
+  it("returns 0 for two otherwise-identical cards", () => {
+    const a = c({ cardImageId: "a" });
+    const b = c({ cardImageId: "b" });
+    expect(compareCardsForDisplay(a, b)).toBe(0);
   });
 });

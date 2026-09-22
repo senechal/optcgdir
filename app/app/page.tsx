@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "../lib/prisma";
 import { getDefaultUserId } from "../lib/currentUser";
 import Dashboard from "../components/Dashboard";
-import { ALT_ART_MARKERS, computeSetOwnershipStats } from "../lib/cardDisplay";
+import { ALT_ART_MARKERS, computeSetOwnershipStats, compareCardsForDisplay } from "../lib/cardDisplay";
 import type { SetOwnershipStats } from "../lib/cardDisplay";
 import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 import packageJson from "../package.json";
@@ -152,7 +152,7 @@ export default async function Home({
   if (powerMax) cards = cards.filter((c) => c.cardPower !== null && Number(c.cardPower) <= Number(powerMax));
 
   const sorters: Record<string, (a: CardWithCollectionInfo, b: CardWithCollectionInfo) => number> = {
-    code: (a, b) => a.cardSetId.localeCompare(b.cardSetId, undefined, { numeric: true }),
+    code: compareCardsForDisplay,
     name: (a, b) => a.cardName.localeCompare(b.cardName),
     cost: (a, b) => (Number(a.cardCost) || 0) - (Number(b.cardCost) || 0),
     power: (a, b) => (Number(a.cardPower) || 0) - (Number(b.cardPower) || 0),
@@ -160,7 +160,11 @@ export default async function Home({
     set: (a, b) => a.setId.localeCompare(b.setId),
     dateAdded: (a, b) => a.cardImageId.localeCompare(b.cardImageId), // fallback estável
   };
-  const activeSorter = sorters[sort] || sorters.code;
+  // As regras de posicionamento (alt art logo após a comum, SP no fim do
+  // set) valem sempre no sort padrão; na aba "Por Set" valem mesmo que o
+  // usuário tenha trocado o "Ordenar" — é o que organiza cada set por
+  // dentro, então o dropdown não se aplica ali.
+  const activeSorter = groupBySet ? compareCardsForDisplay : sorters[sort] || sorters.code;
 
   // Com termo de busca, cartas que batem pelo código (o que fica no canto
   // inferior direito da carta) vêm antes das que só batem pelo nome/texto —

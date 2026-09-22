@@ -54,6 +54,36 @@ export function isAltArt(cardName: string): boolean {
   return ALT_ART_MARKERS.some((marker) => lowerName.includes(marker.toLowerCase()));
 }
 
+export function isSP(cardName: string): boolean {
+  return cardName.toLowerCase().includes("(sp)");
+}
+
+// Regras de posicionamento pro sort padrão (código) e pra aba "Por Set":
+// 1. Dentro do mesmo código impresso, a versão comum vem antes da alt art
+//    (o sort por código já agrupa uma carta com suas variantes; isso só
+//    decide a ordem entre elas).
+// 2. Dentro do mesmo set, cartas SP sempre ficam por último — depois de
+//    todas as outras cartas daquele set, alt art incluída.
+export function compareCardsForDisplay(
+  a: Pick<CardWithCollectionInfo, "setId" | "cardSetId" | "cardName">,
+  b: Pick<CardWithCollectionInfo, "setId" | "cardSetId" | "cardName">
+): number {
+  if (a.setId === b.setId) {
+    const spA = isSP(a.cardName);
+    const spB = isSP(b.cardName);
+    if (spA !== spB) return spA ? 1 : -1;
+  }
+
+  const byCode = a.cardSetId.localeCompare(b.cardSetId, undefined, { numeric: true });
+  if (byCode !== 0) return byCode;
+
+  const altA = isAltArt(a.cardName) && !isSP(a.cardName);
+  const altB = isAltArt(b.cardName) && !isSP(b.cardName);
+  if (altA !== altB) return altA ? 1 : -1;
+
+  return 0;
+}
+
 // Reprint: carta cujo código impresso não bate com o próprio set onde ela
 // está catalogada (ex: "OP12-108" reimpressa dentro do set "OP-14", como
 // bônus/promo de pré-venda). O prefixo esperado é o id do set sem hífen

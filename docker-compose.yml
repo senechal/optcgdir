@@ -59,6 +59,18 @@ services:
       OCR_SERVICE_URL: http://ocr-service:5000
     ports:
       - "${APP_HOST_PORT:-8420}:3000"
+    healthcheck:
+      # Sem isso, `docker compose --wait` (usado pelo E2E) considera o
+      # container "saudável" assim que ele entra em "running" — não espera
+      # o Next.js de dentro realmente estar aceitando conexões. Isso cria
+      # uma corrida: o compose libera antes do server estar de pé, e o
+      # webServer do Playwright vê o processo do `docker compose up --wait`
+      # já ter saído sem a URL responder ainda ("Process from config.webServer
+      # exited early"), um flake intermitente visto no e2e-tests do PR #49.
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
     volumes:
       - /DATA/AppData/optcgdir/catalog-images:/data/catalog-images      # leitura + escrita: a página /admin corrige imagens direto por aqui
       - /DATA/AppData/optcgdir/scan-temp:/data/scan-temp                # app é o único que escreve aqui

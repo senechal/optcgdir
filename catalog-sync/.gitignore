@@ -1,0 +1,5 @@
+# Cópia local do schema pra rodar `npx prisma generate`/testes fora do
+# Docker — o Dockerfile copia de app/prisma no build, essa pasta aqui nunca
+# deve ser commitada (senão vira uma segunda fonte de verdade pra manter em
+# sincronia manualmente com app/prisma/schema.prisma).
+prisma/

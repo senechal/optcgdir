@@ -6,11 +6,13 @@ import { useTranslations } from "next-intl";
 import CardImage from "./CardImage";
 
 export default function AdminCardImageEditor({
+  id,
   cardImageId,
   cardName,
   cardSetId,
   localImagePath,
 }: {
+  id: string;
   cardImageId: string;
   cardName: string;
   cardSetId: string;
@@ -29,7 +31,7 @@ export default function AdminCardImageEditor({
     // como "erro genérico", escondendo o bug de verdade).
     const form = e.currentTarget;
     const formData = new FormData(form);
-    formData.set("cardImageId", cardImageId);
+    formData.set("cardId", id);
 
     setSaving(true);
     setError(null);

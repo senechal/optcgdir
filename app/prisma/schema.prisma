@@ -1,6 +1,9 @@
 // Schema Postgres para o gerenciador de coleção OPTCG
-// Chave real de "carta impressa": card_image_id (ex: OP01-001 vs OP01-001_p1 = parallel)
-// card_set_id NÃO é único (pode ter várias versões/parallels sob o mesmo código)
+// Chave real de "carta impressa": id (hash de card_name+set_id+card_set_id+
+// card_image_id+card_image — ver catalog-sync/src/cardHash.js). card_image_id
+// sozinho NÃO é único: a optcgapi.com reaproveita o mesmo valor pra variantes
+// diferentes (ex: "Kingdew" e "Kingdew (Pandaman Art)" são ambas OP17-006).
+// card_set_id também não é único (várias versões/parallels sob o mesmo código).
 
 generator client {
   provider      = "prisma-client-js"
@@ -21,8 +24,11 @@ model Set {
 }
 
 model Card {
-  // Chave única real da carta impressa (inclui variantes/parallels)
-  cardImageId   String   @id @map("card_image_id")   // ex: "OP01-001" ou "OP01-001_p1"
+  // Hash estável (ver catalog-sync/src/cardHash.js) — id de verdade da carta.
+  id            String   @id
+  // Valor bruto da API (ex: "OP01-001" ou "OP01-001_p1") — só descritivo
+  // agora, pode repetir entre variantes diferentes.
+  cardImageId   String   @map("card_image_id")
   cardSetId     String   @map("card_set_id")          // ex: "OP01-001" (código impresso, pode repetir entre variantes)
   cardName      String   @map("card_name")
   cardText      String?  @map("card_text") @db.Text
@@ -54,6 +60,7 @@ model Card {
 
   @@index([cardSetId])
   @@index([cardName])
+  @@index([cardImageId])
   @@map("cards")
 }
 
@@ -71,8 +78,8 @@ model User {
 
 model CollectionItem {
   id          String   @id @default(cuid())
-  cardImageId String   @map("card_image_id")
-  card        Card     @relation(fields: [cardImageId], references: [cardImageId])
+  cardId      String   @map("card_id")
+  card        Card     @relation(fields: [cardId], references: [id])
   userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id])
 
@@ -84,7 +91,7 @@ model CollectionItem {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@unique([cardImageId, userId, condition])
+  @@unique([cardId, userId, condition])
   @@map("collection_items")
 }
 
@@ -95,7 +102,7 @@ model Deck {
   user          User     @relation(fields: [userId], references: [id])
 
   leaderCardId  String?  @map("leader_card_id")
-  leaderCard    Card?    @relation("LeaderCard", fields: [leaderCardId], references: [cardImageId])
+  leaderCard    Card?    @relation("LeaderCard", fields: [leaderCardId], references: [id])
 
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -106,13 +113,13 @@ model Deck {
 }
 
 model DeckCard {
-  id          String @id @default(cuid())
-  deckId      String @map("deck_id")
-  deck        Deck   @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  cardImageId String @map("card_image_id")
-  card        Card   @relation(fields: [cardImageId], references: [cardImageId])
-  quantity    Int    @default(1)
+  id       String @id @default(cuid())
+  deckId   String @map("deck_id")
+  deck     Deck   @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  cardId   String @map("card_id")
+  card     Card   @relation(fields: [cardId], references: [id])
+  quantity Int    @default(1)
 
-  @@unique([deckId, cardImageId])
+  @@unique([deckId, cardId])
   @@map("deck_cards")
 }

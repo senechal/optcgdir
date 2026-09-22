@@ -11,6 +11,7 @@ vi.mock("next/navigation", () => ({
 function renderEditor(overrides: Partial<Parameters<typeof AdminCardImageEditor>[0]> = {}) {
   return renderWithIntl(
     <AdminCardImageEditor
+      id="a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
       cardImageId="OP01-001"
       cardName="Monkey.D.Luffy"
       cardSetId="OP01-001"
@@ -32,7 +33,7 @@ describe("AdminCardImageEditor", () => {
     expect(screen.getByText("OP01-001 · OP01-001")).toBeInTheDocument();
   });
 
-  it("submits the form to the admin endpoint with the cardImageId attached, then refreshes", async () => {
+  it("submits the form to the admin endpoint with the cardId attached, then refreshes", async () => {
     const { container } = renderEditor();
     const urlInput = container.querySelector('input[name="url"]') as HTMLInputElement;
     fireEvent.change(urlInput, { target: { value: "https://example.com/art.jpg" } });
@@ -41,7 +42,7 @@ describe("AdminCardImageEditor", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledOnce());
     const [url, options] = (fetch as any).mock.calls[0];
     expect(url).toBe("/api/admin/card-image");
-    expect(options.body.get("cardImageId")).toBe("OP01-001");
+    expect(options.body.get("cardId")).toBe("a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2");
     expect(options.body.get("url")).toBe("https://example.com/art.jpg");
 
     await waitFor(() => expect(refresh).toHaveBeenCalledOnce());

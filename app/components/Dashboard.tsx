@@ -152,11 +152,11 @@ export default function Dashboard({
     updateParam("search", term);
   }
 
-  async function mutateCollection(cardImageId: string, action: string) {
+  async function mutateCollection(cardId: string, action: string) {
     await fetch("/api/collection", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cardImageId, action }),
+      body: JSON.stringify({ cardId, action }),
     });
     router.refresh();
   }
@@ -315,7 +315,7 @@ export default function Dashboard({
               <div className="card-grid">
                 {groupCards.map((card) => (
                   <CardTile
-                    key={card.cardImageId}
+                    key={card.id}
                     card={card}
                     onMutate={mutateCollection}
                     onEnlarge={setEnlargedCard}
@@ -341,7 +341,7 @@ export default function Dashboard({
                 </thead>
                 <tbody>
                   {groupCards.map((card) => (
-                    <CardRow key={card.cardImageId} card={card} onMutate={mutateCollection} onEnlarge={setEnlargedCard} />
+                    <CardRow key={card.id} card={card} onMutate={mutateCollection} onEnlarge={setEnlargedCard} />
                   ))}
                 </tbody>
               </table>

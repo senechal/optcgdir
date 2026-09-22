@@ -49,7 +49,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         {cards.map((card) => (
           <AdminCardImageEditor
-            key={card.cardImageId}
+            key={card.id}
+            id={card.id}
             cardImageId={card.cardImageId}
             cardName={card.cardName}
             cardSetId={card.cardSetId}

@@ -52,15 +52,15 @@ export default function CardTile({
       )}
 
       <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 8 }}>
-        <button className="icon-btn" onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>
+        <button className="icon-btn" onClick={() => onMutate(card.id, "decrement")} title={t("removeOne")}>
           −
         </button>
-        <button className="icon-btn" onClick={() => onMutate(card.cardImageId, "increment")} title={t("addOne")}>
+        <button className="icon-btn" onClick={() => onMutate(card.id, "increment")} title={t("addOne")}>
           +
         </button>
         <button
           className="icon-btn"
-          onClick={() => onMutate(card.cardImageId, "toggleWantsTrade")}
+          onClick={() => onMutate(card.id, "toggleWantsTrade")}
           title={t("wantsTrade")}
           style={{ opacity: card.wantsTrade ? 1 : 0.35 }}
         >

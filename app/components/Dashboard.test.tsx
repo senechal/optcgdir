@@ -13,6 +13,7 @@ vi.mock("next/navigation", () => ({
 
 function card(overrides: Partial<CardWithCollectionInfo> = {}): CardWithCollectionInfo {
   return {
+    id: `id-${overrides.cardImageId ?? "OP01-001"}`,
     cardImageId: "OP01-001",
     cardSetId: "OP01-001",
     cardName: "Monkey.D.Luffy",
@@ -245,7 +246,7 @@ describe("Dashboard", () => {
     renderDashboard({ cards: [card({ cardImageId: "OP01-099" })] });
     fireEvent.click(screen.getByTitle("Adicionar 1"));
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/collection", expect.objectContaining({ method: "POST" })));
-    expect(JSON.parse((fetch as any).mock.calls[0][1].body)).toEqual({ cardImageId: "OP01-099", action: "increment" });
+    expect(JSON.parse((fetch as any).mock.calls[0][1].body)).toEqual({ cardId: "id-OP01-099", action: "increment" });
     await waitFor(() => expect(refresh).toHaveBeenCalledOnce());
   });
 

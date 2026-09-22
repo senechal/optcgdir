@@ -25,6 +25,7 @@ async function renderProps(searchParams: Record<string, string | string[] | unde
 
 function card(overrides: Record<string, unknown> = {}) {
   return {
+    id: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
     cardImageId: "OP01-001",
     cardName: "Monkey.D.Luffy",
     cardSetId: "OP01-001",
@@ -72,7 +73,10 @@ describe("AdminPage (app/admin/page.tsx)", () => {
   });
 
   it("renders one editor per result, passing through the card's fields", async () => {
-    findMany.mockResolvedValue([card(), card({ cardImageId: "OP01-002", cardName: "Zoro" })]);
+    findMany.mockResolvedValue([
+      card(),
+      card({ id: "f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5", cardImageId: "OP01-002", cardName: "Zoro" }),
+    ]);
     const element = await renderProps({ q: "o" });
     const rendered = JSON.stringify(element);
     expect(rendered).toContain("Monkey.D.Luffy");

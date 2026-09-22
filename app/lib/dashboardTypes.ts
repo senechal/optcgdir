@@ -1,4 +1,8 @@
 export type CardWithCollectionInfo = {
+  id: string;
+  // Valor bruto da API — só descritivo agora, pode repetir entre variantes
+  // diferentes da mesma carta (ex: uma alt art e a comum). `id` é a chave
+  // de verdade, usada em toda mutação de coleção/edição de imagem.
   cardImageId: string;
   cardSetId: string;
   cardName: string;

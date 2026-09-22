@@ -60,15 +60,15 @@ export default function CardRow({
       <td className="col-qty hide-mobile">{card.quantity}</td>
       <td className="col-indeck hide-mobile">{card.allocatedInDecks > 0 ? card.allocatedInDecks : "-"}</td>
       <td className="col-actions">
-        <button className="icon-btn" onClick={() => onMutate(card.cardImageId, "decrement")} title={t("removeOne")}>
+        <button className="icon-btn" onClick={() => onMutate(card.id, "decrement")} title={t("removeOne")}>
           −
         </button>
-        <button className="icon-btn" onClick={() => onMutate(card.cardImageId, "increment")} title={t("addOne")}>
+        <button className="icon-btn" onClick={() => onMutate(card.id, "increment")} title={t("addOne")}>
           +
         </button>
         <button
           className="icon-btn"
-          onClick={() => onMutate(card.cardImageId, "toggleWantsTrade")}
+          onClick={() => onMutate(card.id, "toggleWantsTrade")}
           title={t("wantsTrade")}
           style={{ opacity: card.wantsTrade ? 1 : 0.35 }}
         >

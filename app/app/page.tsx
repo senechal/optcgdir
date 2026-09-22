@@ -122,6 +122,7 @@ export default async function Home({
 
   // Achata pra um formato simples e calcula quantidade/alocação/quero-trocar
   let cards: CardWithCollectionInfo[] = rawCards.map((c: any) => ({
+    id: c.id,
     cardImageId: c.cardImageId,
     cardSetId: c.cardSetId,
     cardName: c.cardName,
@@ -158,7 +159,7 @@ export default async function Home({
     power: (a, b) => (Number(a.cardPower) || 0) - (Number(b.cardPower) || 0),
     rarity: (a, b) => (a.rarity || "").localeCompare(b.rarity || ""),
     set: (a, b) => a.setId.localeCompare(b.setId),
-    dateAdded: (a, b) => a.cardImageId.localeCompare(b.cardImageId), // fallback estável
+    dateAdded: (a, b) => a.id.localeCompare(b.id), // fallback estável
   };
   // As regras de posicionamento (alt art logo após a comum, SP no fim do
   // set) valem sempre no sort padrão; na aba "Por Set" valem mesmo que o

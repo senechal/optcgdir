@@ -11,10 +11,12 @@ const ALLOWED_EXT = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 // (ex: uma alt art e a comum) podem estar apontando pro mesmo arquivo por
 // engano — é exatamente o bug que essa página existe pra corrigir. Sempre
 // grava num arquivo novo e exclusivo dessa carta, então editar uma nunca
-// estraga a imagem de outra.
-function manualFilename(cardImageId: string, ext: string): string {
-  const safeId = cardImageId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  return `${safeId}__manual${ext}`;
+// estraga a imagem de outra. cardImageId sozinho não garante isso (pode
+// repetir entre variantes), então usa um pedaço do id (hash, sempre único)
+// junto — mantém o nome legível sem arriscar colisão.
+function manualFilename(cardImageId: string, cardId: string, ext: string): string {
+  const safeImageId = cardImageId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  return `${safeImageId}__manual-${cardId.slice(0, 10)}${ext}`;
 }
 
 function extFromContentType(contentType: string | null): string {
@@ -25,12 +27,12 @@ function extFromContentType(contentType: string | null): string {
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
-  const cardImageId = form.get("cardImageId");
-  if (typeof cardImageId !== "string" || !cardImageId) {
-    return NextResponse.json({ error: "cardImageId é obrigatório" }, { status: 400 });
+  const cardId = form.get("cardId");
+  if (typeof cardId !== "string" || !cardId) {
+    return NextResponse.json({ error: "cardId é obrigatório" }, { status: 400 });
   }
 
-  const card = await prisma.card.findUnique({ where: { cardImageId } });
+  const card = await prisma.card.findUnique({ where: { id: cardId } });
   if (!card) {
     return NextResponse.json({ error: "Carta não encontrada" }, { status: 404 });
   }
@@ -79,11 +81,11 @@ export async function POST(req: NextRequest) {
 
   if (!ALLOWED_EXT.has(ext)) ext = ".jpg";
 
-  const filename = manualFilename(cardImageId, ext);
+  const filename = manualFilename(card.cardImageId, cardId, ext);
   await fs.mkdir(IMAGES_PATH, { recursive: true });
   await fs.writeFile(path.join(IMAGES_PATH, filename), buffer);
 
-  await prisma.card.update({ where: { cardImageId }, data: { localImagePath: filename } });
+  await prisma.card.update({ where: { id: cardId }, data: { localImagePath: filename } });
 
   return NextResponse.json({ localImagePath: filename });
 }

@@ -24,6 +24,8 @@ vi.mock("../../../lib/prisma", () => ({
 
 import { POST } from "./route";
 
+const CARD_ID = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
+
 function request(body: unknown) {
   return new NextRequest("http://localhost/api/collection", {
     method: "POST",
@@ -37,13 +39,13 @@ describe("POST /api/collection", () => {
     getDefaultUserId.mockResolvedValue("user-1");
   });
 
-  it("returns 400 when cardImageId is missing", async () => {
+  it("returns 400 when cardId is missing", async () => {
     const res = await POST(request({ action: "increment" }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when action is missing", async () => {
-    const res = await POST(request({ cardImageId: "OP01-001" }));
+    const res = await POST(request({ cardId: CARD_ID }));
     expect(res.status).toBe(400);
   });
 
@@ -55,40 +57,40 @@ describe("POST /api/collection", () => {
 
   it("returns 400 for an unrecognized action", async () => {
     findFirst.mockResolvedValue(null);
-    const res = await POST(request({ cardImageId: "OP01-001", action: "explode" }));
+    const res = await POST(request({ cardId: CARD_ID, action: "explode" }));
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "action inválida" });
   });
 
   it("increments the quantity of an existing collection item", async () => {
     findFirst.mockResolvedValue({ id: "item-1", quantity: 1, wantsTrade: false });
-    const res = await POST(request({ cardImageId: "OP01-001", action: "increment" }));
+    const res = await POST(request({ cardId: CARD_ID, action: "increment" }));
     expect(update).toHaveBeenCalledWith({ where: { id: "item-1" }, data: { quantity: { increment: 1 } } });
     expect(res.status).toBe(200);
   });
 
   it("creates a new collection item with quantity 1 when incrementing a card not yet owned", async () => {
     findFirst.mockResolvedValue(null);
-    await POST(request({ cardImageId: "OP01-001", action: "increment" }));
-    expect(create).toHaveBeenCalledWith({ data: { cardImageId: "OP01-001", userId: "user-1", quantity: 1 } });
+    await POST(request({ cardId: CARD_ID, action: "increment" }));
+    expect(create).toHaveBeenCalledWith({ data: { cardId: CARD_ID, userId: "user-1", quantity: 1 } });
   });
 
   it("decrements the quantity when it's greater than 1", async () => {
     findFirst.mockResolvedValue({ id: "item-1", quantity: 3, wantsTrade: false });
-    await POST(request({ cardImageId: "OP01-001", action: "decrement" }));
+    await POST(request({ cardId: CARD_ID, action: "decrement" }));
     expect(update).toHaveBeenCalledWith({ where: { id: "item-1" }, data: { quantity: { decrement: 1 } } });
     expect(del).not.toHaveBeenCalled();
   });
 
   it("deletes the collection item when decrementing from quantity 1", async () => {
     findFirst.mockResolvedValue({ id: "item-1", quantity: 1, wantsTrade: false });
-    await POST(request({ cardImageId: "OP01-001", action: "decrement" }));
+    await POST(request({ cardId: CARD_ID, action: "decrement" }));
     expect(del).toHaveBeenCalledWith({ where: { id: "item-1" } });
   });
 
   it("silently no-ops when decrementing a card that isn't owned", async () => {
     findFirst.mockResolvedValue(null);
-    const res = await POST(request({ cardImageId: "OP01-001", action: "decrement" }));
+    const res = await POST(request({ cardId: CARD_ID, action: "decrement" }));
     expect(update).not.toHaveBeenCalled();
     expect(del).not.toHaveBeenCalled();
     expect(res.status).toBe(200);
@@ -96,19 +98,19 @@ describe("POST /api/collection", () => {
 
   it("toggles wantsTrade to true on an existing item that didn't want trade", async () => {
     findFirst.mockResolvedValue({ id: "item-1", quantity: 1, wantsTrade: false });
-    await POST(request({ cardImageId: "OP01-001", action: "toggleWantsTrade" }));
+    await POST(request({ cardId: CARD_ID, action: "toggleWantsTrade" }));
     expect(update).toHaveBeenCalledWith({ where: { id: "item-1" }, data: { wantsTrade: true } });
   });
 
   it("toggles wantsTrade to false on an existing item that wanted trade", async () => {
     findFirst.mockResolvedValue({ id: "item-1", quantity: 1, wantsTrade: true });
-    await POST(request({ cardImageId: "OP01-001", action: "toggleWantsTrade" }));
+    await POST(request({ cardId: CARD_ID, action: "toggleWantsTrade" }));
     expect(update).toHaveBeenCalledWith({ where: { id: "item-1" }, data: { wantsTrade: false } });
   });
 
   it("creates a zero-quantity wantsTrade item when toggling a card not yet owned", async () => {
     findFirst.mockResolvedValue(null);
-    await POST(request({ cardImageId: "OP01-001", action: "toggleWantsTrade" }));
-    expect(create).toHaveBeenCalledWith({ data: { cardImageId: "OP01-001", userId: "user-1", quantity: 0, wantsTrade: true } });
+    await POST(request({ cardId: CARD_ID, action: "toggleWantsTrade" }));
+    expect(create).toHaveBeenCalledWith({ data: { cardId: CARD_ID, userId: "user-1", quantity: 0, wantsTrade: true } });
   });
 });

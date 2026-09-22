@@ -7,6 +7,7 @@ import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 
 function card(overrides: Partial<CardWithCollectionInfo> = {}): CardWithCollectionInfo {
   return {
+    id: `id-${overrides.cardImageId ?? "OP01-001"}`,
     cardImageId: "OP01-001",
     cardSetId: "OP01-001",
     cardName: "Monkey.D.Luffy",
@@ -105,8 +106,8 @@ describe("CardRow", () => {
     fireEvent.click(screen.getByTitle("Remover 1"));
     fireEvent.click(screen.getByTitle("Adicionar 1"));
     fireEvent.click(screen.getByTitle("Quero trocar"));
-    expect(onMutate).toHaveBeenNthCalledWith(1, "ROW-1", "decrement");
-    expect(onMutate).toHaveBeenNthCalledWith(2, "ROW-1", "increment");
-    expect(onMutate).toHaveBeenNthCalledWith(3, "ROW-1", "toggleWantsTrade");
+    expect(onMutate).toHaveBeenNthCalledWith(1, "id-ROW-1", "decrement");
+    expect(onMutate).toHaveBeenNthCalledWith(2, "id-ROW-1", "increment");
+    expect(onMutate).toHaveBeenNthCalledWith(3, "id-ROW-1", "toggleWantsTrade");
   });
 });

@@ -36,6 +36,7 @@ import { ALT_ART_MARKERS } from "../lib/cardDisplay";
 
 function rawCard(overrides: Record<string, unknown> = {}) {
   return {
+    id: `id-${overrides.cardImageId ?? "OP01-001"}`,
     cardImageId: "OP01-001",
     cardSetId: "OP01-001",
     cardName: "Monkey.D.Luffy",

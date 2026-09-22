@@ -7,18 +7,18 @@ type Action = "increment" | "decrement" | "toggleWantsTrade";
 export async function POST(req: NextRequest) {
   const userId = await getDefaultUserId();
   const body = await req.json().catch(() => null);
-  const cardImageId: string | undefined = body?.cardImageId;
+  const cardId: string | undefined = body?.cardId;
   const action: Action | undefined = body?.action;
 
-  if (!cardImageId || !action) {
+  if (!cardId || !action) {
     return NextResponse.json(
-      { error: "cardImageId e action são obrigatórios" },
+      { error: "cardId e action são obrigatórios" },
       { status: 400 }
     );
   }
 
   const existing = await prisma.collectionItem.findFirst({
-    where: { cardImageId, userId, condition: null },
+    where: { cardId, userId, condition: null },
   });
 
   if (action === "increment") {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       });
     } else {
       await prisma.collectionItem.create({
-        data: { cardImageId, userId, quantity: 1 },
+        data: { cardId, userId, quantity: 1 },
       });
     }
   } else if (action === "decrement") {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       });
     } else {
       await prisma.collectionItem.create({
-        data: { cardImageId, userId, quantity: 0, wantsTrade: true },
+        data: { cardId, userId, quantity: 0, wantsTrade: true },
       });
     }
   } else {

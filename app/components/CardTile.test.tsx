@@ -7,6 +7,7 @@ import type { CardWithCollectionInfo } from "../lib/dashboardTypes";
 
 function card(overrides: Partial<CardWithCollectionInfo> = {}): CardWithCollectionInfo {
   return {
+    id: `id-${overrides.cardImageId ?? "OP01-001"}`,
     cardImageId: "OP01-001",
     cardSetId: "OP01-001",
     cardName: "Monkey.D.Luffy",
@@ -83,9 +84,9 @@ describe("CardTile", () => {
     fireEvent.click(screen.getByTitle("Remover 1"));
     fireEvent.click(screen.getByTitle("Adicionar 1"));
     fireEvent.click(screen.getByTitle("Quero trocar"));
-    expect(onMutate).toHaveBeenNthCalledWith(1, "XYZ-1", "decrement");
-    expect(onMutate).toHaveBeenNthCalledWith(2, "XYZ-1", "increment");
-    expect(onMutate).toHaveBeenNthCalledWith(3, "XYZ-1", "toggleWantsTrade");
+    expect(onMutate).toHaveBeenNthCalledWith(1, "id-XYZ-1", "decrement");
+    expect(onMutate).toHaveBeenNthCalledWith(2, "id-XYZ-1", "increment");
+    expect(onMutate).toHaveBeenNthCalledWith(3, "id-XYZ-1", "toggleWantsTrade");
   });
 
   it("shows the collection status badge only when quantity is greater than 0", () => {

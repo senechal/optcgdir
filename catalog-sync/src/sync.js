@@ -12,7 +12,7 @@
 import { PrismaClient } from "@prisma/client";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { assignCardKeys } from "./cardKeys.js";
+import { computeCardId } from "./cardHash.js";
 
 const prisma = new PrismaClient();
 const BASE_URL = process.env.OPTCGAPI_BASE_URL || "https://optcgapi.com/api";
@@ -102,10 +102,23 @@ async function ensureSetExists(setId, fallbackName) {
   }
 }
 
-async function downloadImage(remoteUrl, fileStem) {
+// O nome do arquivo remoto (ex: "OP17-006_XIlMtK9.jpg") já é único por
+// imagem de verdade na própria CDN da optcgapi.com — inclusive entre
+// variantes que reaproveitam o mesmo card_image_id (a Alternate Art de uma
+// carta tem um sufixo diferente da comum). Usar isso como nome local evita
+// ter que inventar um esquema de desambiguação próprio.
+function remoteFilename(remoteUrl) {
+  try {
+    return decodeURIComponent(new URL(remoteUrl).pathname.split("/").pop() ?? "") || null;
+  } catch {
+    return null;
+  }
+}
+
+async function downloadImage(remoteUrl) {
   if (!remoteUrl) return null;
-  const ext = path.extname(new URL(remoteUrl).pathname) || ".jpg";
-  const filename = `${fileStem}${ext}`;
+  const filename = remoteFilename(remoteUrl);
+  if (!filename) return null;
   const localPath = path.join(IMAGES_PATH, filename);
 
   try {
@@ -127,17 +140,28 @@ async function downloadImage(remoteUrl, fileStem) {
   return filename;
 }
 
-// `key` é o cardImageId a gravar (já desambiguado por assignCardKeys) e
-// `fileStem` o nome-base do arquivo da imagem (null = usa a própria key).
-async function upsertCard(raw, sourceType, key, fileStem) {
+async function upsertCard(raw, sourceType) {
   const { setId, setName } = resolveSetAssignment(raw, sourceType);
   await ensureSetExists(setId, setName);
 
-  const localImagePath = await downloadImage(raw.card_image, fileStem ?? key);
+  const localImagePath = await downloadImage(raw.card_image);
+  // Usa o setId JÁ RESOLVIDO (não o raw.set_id da API) — assim o hash fica
+  // estável mesmo se a optcgapi.com mudar como agrupa um set combinado
+  // (ver resolveSetAssignment) e continua sendo o mesmo entre a migração
+  // única (que só tem o setId já resolvido salvo no banco) e toda sync
+  // futura, sem precisar reconstruir o valor bruto original.
+  const id = computeCardId({
+    cardName: raw.card_name,
+    setId,
+    cardSetId: raw.card_set_id,
+    cardImageId: raw.card_image_id,
+    cardImage: raw.card_image,
+  });
 
   await prisma.card.upsert({
-    where: { cardImageId: key },
+    where: { id },
     update: {
+      cardImageId: raw.card_image_id,
       cardSetId: raw.card_set_id ?? raw.card_image_id,
       cardName: raw.card_name,
       cardText: raw.card_text ?? null,
@@ -158,7 +182,8 @@ async function upsertCard(raw, sourceType, key, fileStem) {
       lastSyncedAt: new Date(),
     },
     create: {
-      cardImageId: key,
+      id,
+      cardImageId: raw.card_image_id,
       cardSetId: raw.card_set_id ?? raw.card_image_id,
       cardName: raw.card_name,
       cardText: raw.card_text ?? null,
@@ -180,21 +205,6 @@ async function upsertCard(raw, sourceType, key, fileStem) {
   });
 }
 
-// Uma carta de set e um promo/starter podem ter o mesmo card_image_id (ex:
-// "OP14-033"). Quem vem de uma fonte de maior prioridade mantém o id; as
-// demais ganham chave própria (ver assignCardKeys) em vez de sobrescrever.
-const SOURCE_PRIORITY = ["set", "starter", "promo", "don"];
-
-async function loadReservedIds(sourceType) {
-  const higher = SOURCE_PRIORITY.slice(0, SOURCE_PRIORITY.indexOf(sourceType));
-  if (higher.length === 0) return new Set();
-  const rows = await prisma.card.findMany({
-    where: { sourceType: { in: higher } },
-    select: { cardImageId: true },
-  });
-  return new Set(rows.map((r) => r.cardImageId));
-}
-
 async function main() {
   const startedAt = Date.now();
   console.log(`[sync] iniciando ${FULL_SYNC ? "sync completo" : "sync incremental"}...`);
@@ -206,19 +216,12 @@ async function main() {
     try {
       const cards = await fetchJson(source.url);
       console.log(`[sync] ${source.url} -> ${cards.length} cartas`);
-      const keyed = assignCardKeys(
-        cards.filter((c) => {
-          if (c.card_image_id) return true;
-          console.warn("[sync] carta sem card_image_id, ignorando:", c.card_name);
-          return false;
-        }),
-        { reserved: await loadReservedIds(source.sourceType) }
-      );
-      if (keyed.length !== cards.length) {
-        console.log(`[sync] ${cards.length - keyed.length} carta(s) repetida(s) na origem descartada(s)`);
-      }
-      for (const { raw, key, fileStem } of keyed) {
-        await upsertCard(raw, source.sourceType, key, fileStem);
+      for (const raw of cards) {
+        if (!raw.card_image_id) {
+          console.warn("[sync] carta sem card_image_id, ignorando:", raw.card_name);
+          continue;
+        }
+        await upsertCard(raw, source.sourceType);
         total++;
       }
     } catch (err) {

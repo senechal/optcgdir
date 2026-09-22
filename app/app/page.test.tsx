@@ -248,6 +248,34 @@ describe("Home (page.tsx)", () => {
     expect(props.cards[0].cardImageId).toBe("by-code");
   });
 
+  it("applies the placement rules (alt art after common, SP last) under the default code sort", async () => {
+    findMany.mockImplementation((args: any) => {
+      if (args?.distinct) return Promise.resolve([]);
+      return Promise.resolve([
+        rawCard({ cardImageId: "sp", cardSetId: "OP14-001", setId: "OP-14", cardName: "Trafalgar Law (SP)" }),
+        rawCard({ cardImageId: "alt", cardSetId: "OP14-001", setId: "OP-14", cardName: "Trafalgar Law (Alternate Art)" }),
+        rawCard({ cardImageId: "base", cardSetId: "OP14-001", setId: "OP-14", cardName: "Trafalgar Law" }),
+        rawCard({ cardImageId: "other", cardSetId: "OP14-090", setId: "OP-14", cardName: "Someone Else" }),
+      ]);
+    });
+    const props = await homeProps({});
+    expect(props.cards.map((c: any) => c.cardImageId)).toEqual(["base", "alt", "other", "sp"]);
+  });
+
+  it("applies the placement rules in the grouped tab even when a different sort is chosen", async () => {
+    // Por nome puro, "Aaa..." viria antes de "Zzz..." (SP primeiro) — a
+    // aba "Por Set" deve ignorar isso e mandar o SP pro fim mesmo assim.
+    findMany.mockImplementation((args: any) => {
+      if (args?.distinct) return Promise.resolve([]);
+      return Promise.resolve([
+        rawCard({ cardImageId: "sp", cardSetId: "OP14-001", setId: "OP-14", cardName: "Aaa Special (SP)" }),
+        rawCard({ cardImageId: "base", cardSetId: "OP14-001", setId: "OP-14", cardName: "Zzz Base" }),
+      ]);
+    });
+    const props = await homeProps({ tab: "grouped", sort: "name" });
+    expect(props.cards.map((c: any) => c.cardImageId)).toEqual(["base", "sp"]);
+  });
+
   it("falls back to the code sorter for an unrecognized sort value", async () => {
     findMany.mockImplementation((args: any) => {
       if (args?.distinct) return Promise.resolve([]);
